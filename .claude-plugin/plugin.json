@@ -1,0 +1,21 @@
+{
+  "name": "dev-workflows",
+  "displayName": "SDD Workflows",
+  "version": "0.2.0",
+  "description": "Stack-agnostic spec-driven development workflows: build a feature, change a feature, fix a bug, plus a design grill and a real-browser e2e smoke gate. Reads a per-project stack config so the same skills work on any stack.",
+  "author": {
+    "name": "Michael B"
+  },
+  "license": "MIT",
+  "keywords": [
+    "spec-driven-development",
+    "workflows",
+    "tdd",
+    "feature",
+    "troubleshoot",
+    "code-review",
+    "e2e",
+    "stack-agnostic"
+  ],
+  "skills": "./skills/"
+}
