@@ -1,4 +1,4 @@
-# SDD Workflows
+# Dev Workflows
 
 Stack-agnostic, intent-based spec-driven-development workflows for Claude Code. The same
 skills work on any stack (Next.js + Supabase, React + Vite, Rails, …) because everything
