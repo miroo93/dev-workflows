@@ -258,6 +258,13 @@ So **every** dispatch in steps 6–7 — implementer *and* both reviewers and th
 
 The prompt templates below already bake this in — keep the worktree block at the **top** of each, and substitute the real absolute path for `WORKTREE_PATH` every time. Never dispatch a code or review subagent without it.
 
+**Red flags — a subagent is in the wrong tree (STOP; do not report success):**
+- `git rev-parse --show-toplevel` does **not** equal `WORKTREE_PATH`.
+- `git diff main...HEAD` (or `git status`) comes back **empty** when the task should have changes. An empty diff is almost never "clean code" — it means you're on the planning branch in the repo root, or `HEAD` isn't the feature branch. **Never report `COMPLIANT` / `APPROVED` / "no changes" off an empty diff** — re-verify the worktree first, and return `BLOCKED` if the changes still aren't visible.
+- You had to `cd` out of `WORKTREE_PATH` to find files.
+
+This list exists because the failure is **silent**: the wrong tree yields a clean-*looking* result, not an error. Treat "nothing to review" as a bug in your own setup, not as a finding. (This is the exact failure that prompted the contract — testing showed capable agents recover by noticing the empty diff; weaker or hurried agents trust it and falsely report clean. The red flag makes the recovery explicit instead of luck.)
+
 ---
 
 ### 6. Implement — subagent-driven loop (TDD)
@@ -321,9 +328,11 @@ Return one of:
 Review this implementation for spec compliance.
 
 WORKTREE (do this FIRST): `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
-must equal WORKTREE_PATH. The diff lives in the worktree, NOT the repo root —
-if you review from the wrong tree you will see a clean branch and wrongly report "no changes".
-Run every command below from inside WORKTREE_PATH.
+— the output MUST equal WORKTREE_PATH. If it does not, STOP and return BLOCKED:
+you are in the wrong tree; do NOT review the repo root and do NOT report "no changes".
+Run every command below from inside WORKTREE_PATH. An EMPTY `git diff main...HEAD`
+means wrong tree (or HEAD isn't BRANCH_NAME), NOT clean code — re-verify before
+reporting; never return COMPLIANT off an empty diff.
 
 Spec file: FEATURE_DIRECTORY/spec.md
 Branch: BRANCH_NAME
@@ -349,8 +358,11 @@ If not compliant: dispatch implementer to fix, then re-review. Loop until compli
 Review this implementation for code quality.
 
 WORKTREE (do this FIRST): `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
-must equal WORKTREE_PATH. The diff lives in the worktree, NOT the repo root.
-Run every command below from inside WORKTREE_PATH.
+— the output MUST equal WORKTREE_PATH. If it does not, STOP and return BLOCKED:
+you are in the wrong tree; do NOT review the repo root. Run every command below
+from inside WORKTREE_PATH. An EMPTY `git diff main...HEAD` means wrong tree (or
+HEAD isn't BRANCH_NAME), NOT clean code — re-verify before reporting; never
+return APPROVED off an empty diff.
 
 Branch: BRANCH_NAME
 [PROJECT CONTEXT]
@@ -387,8 +399,11 @@ After all tasks complete:
 Final code review for the feature.
 
 WORKTREE (do this FIRST): `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
-must equal WORKTREE_PATH. The full diff lives in the worktree, NOT the repo root.
-Run every command below from inside WORKTREE_PATH.
+— the output MUST equal WORKTREE_PATH. If it does not, STOP and return BLOCKED:
+you are in the wrong tree; do NOT review the repo root. Run every command below
+from inside WORKTREE_PATH. An EMPTY `git diff main...HEAD` means wrong tree (or
+HEAD isn't BRANCH_NAME), NOT clean code — re-verify before reporting; never
+return READY_FOR_PR off an empty diff.
 
 Feature directory: FEATURE_DIRECTORY
 Branch: BRANCH_NAME
