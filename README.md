@@ -15,6 +15,7 @@ at runtime instead of hardcoding a framework or build command.
 | `/grill-me` | Stress-test a plan/design — relentless one-decision-at-a-time interview via `AskUserQuestion`. Used as a gate by `/feature` and `/improve`. |
 | `e2e-smoke` | *(internal)* Real-browser smoke gate invoked by the three workflows. Returns PASS/FAIL/BLOCKED. |
 | `/spec` `/plan` `/tasks` `/implement` | Thin entry points that defer to your spec layer (GitHub Spec-Kit if installed, plain markdown, or none). |
+| `/writing-skills` | Author or update the skills in this repo using TDD-for-skills (RED baseline → GREEN minimal skill → REFACTOR to close loopholes). Vendored from [Superpowers](https://github.com/obra/superpowers) — see `skills/writing-skills/ATTRIBUTION.md`. |
 
 **Routing in one line:** new feature → `/feature` · change a working feature → `/improve` · wrong/broken behavior → `/troubleshoot`.
 
