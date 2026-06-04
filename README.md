@@ -12,6 +12,7 @@ at runtime instead of hardcoding a framework or build command.
 | `/feature` | Build a **new** feature end-to-end (brainstorm → grill → spec → plan → tasks → worktree → TDD build with per-task review → PR). |
 | `/improve` | **Change/extend** an existing feature that works as specified. Amends the spec first, then a scope-matched build. |
 | `/troubleshoot` | **Fix a bug** you hit while manually testing. Root-cause gate (no fix before root cause) → test-first fix → PR. |
+| `/research` | **Research a question/topic** with cited evidence. Decomposes into sub-questions, fans out parallel web searches via subagents, fetches + verifies sources, then synthesizes a cited report. |
 | `/grill-me` | Stress-test a plan/design — relentless one-decision-at-a-time interview via `AskUserQuestion`. Used as a gate by `/feature` and `/improve`. |
 | `e2e-smoke` | *(internal)* Real-browser smoke gate invoked by the three workflows. Returns PASS/FAIL/BLOCKED. |
 | `/spec` `/plan` `/tasks` `/implement` | Thin entry points that defer to your spec layer (GitHub Spec-Kit if installed, plain markdown, or none). |
