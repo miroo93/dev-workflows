@@ -238,9 +238,25 @@ Before any code is written, establish an isolated workspace. Invoke **`superpowe
 **Conditional gate:** create a worktree for the **full-pipeline tier**. For smaller runs where the lighter path is fine, you may build directly on the feature branch.
 
 Once the worktree exists:
-- Record `WORKTREE_PATH` alongside `FEATURE_DIRECTORY` / `BRANCH_NAME`.
+- Record `WORKTREE_PATH` (use the **absolute** path) alongside `FEATURE_DIRECTORY` / `BRANCH_NAME`.
 - All subsequent implement subagents operate inside `WORKTREE_PATH`.
 - Confirm the baseline is green by running **[VERIFY]** before starting the loop.
+
+#### Worktree dispatch contract (applies to EVERY subagent below)
+
+Subagents do **not** inherit the worktree — a freshly dispatched subagent starts in the **repo root** (the planning branch, which stays clean). If you don't pin the path, the subagent reads and writes the wrong tree: implementers commit nothing useful, reviewers `git diff` a clean branch and report "no changes". This is the single most common failure in this pipeline.
+
+So **every** dispatch in steps 6–7 — implementer *and* both reviewers and the final review — MUST:
+
+1. Pass the **absolute** `WORKTREE_PATH` as the first line of the prompt.
+2. Instruct the subagent to make its **first action** `cd "WORKTREE_PATH"` and **verify** it landed there before doing anything else:
+   ```
+   cd "WORKTREE_PATH" && git rev-parse --show-toplevel
+   # the output MUST equal WORKTREE_PATH — if it does not, STOP and return BLOCKED
+   ```
+3. Require that **all** file reads/writes and **all** git commands run from inside `WORKTREE_PATH` (no `cd` back to the repo root, no absolute paths into the original checkout).
+
+The prompt templates below already bake this in — keep the worktree block at the **top** of each, and substitute the real absolute path for `WORKTREE_PATH` every time. Never dispatch a code or review subagent without it.
 
 ---
 
@@ -263,8 +279,13 @@ For each task (in order, never parallel — tasks have dependencies):
 ```
 You are implementing one task in a feature.
 
+WORKTREE (do this FIRST, before anything else):
+- Your working directory is the worktree: WORKTREE_PATH
+- First action: `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
+  The output MUST equal WORKTREE_PATH. If it does not, STOP and return BLOCKED — do not work in the repo root.
+- Run ALL file edits and ALL git commands from inside WORKTREE_PATH. Do not cd elsewhere; do not write into the original checkout.
+
 CONTEXT:
-- Worktree: WORKTREE_PATH — work ONLY inside this directory
 - Feature directory: FEATURE_DIRECTORY
 - Branch: BRANCH_NAME
 [PROJECT CONTEXT]
@@ -299,6 +320,11 @@ Return one of:
 ```
 Review this implementation for spec compliance.
 
+WORKTREE (do this FIRST): `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
+must equal WORKTREE_PATH. The diff lives in the worktree, NOT the repo root —
+if you review from the wrong tree you will see a clean branch and wrongly report "no changes".
+Run every command below from inside WORKTREE_PATH.
+
 Spec file: FEATURE_DIRECTORY/spec.md
 Branch: BRANCH_NAME
 
@@ -321,6 +347,10 @@ If not compliant: dispatch implementer to fix, then re-review. Loop until compli
 
 ```
 Review this implementation for code quality.
+
+WORKTREE (do this FIRST): `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
+must equal WORKTREE_PATH. The diff lives in the worktree, NOT the repo root.
+Run every command below from inside WORKTREE_PATH.
 
 Branch: BRANCH_NAME
 [PROJECT CONTEXT]
@@ -349,12 +379,16 @@ If not approved on critical/important issues: dispatch implementer to fix, then 
 
 After all tasks complete:
 
-1. Run **[VERIFY]** directly (not via subagent — confirm a clean result).
+1. Run **[VERIFY]** directly (not via subagent — confirm a clean result), **from inside `WORKTREE_PATH`** (`cd "WORKTREE_PATH"` first — the code under test is in the worktree, not the repo root).
 2. If it fails: dispatch a fix subagent targeting the specific errors.
 3. Once clean: dispatch a final code-review subagent across the full diff:
 
 ```
 Final code review for the feature.
+
+WORKTREE (do this FIRST): `cd "WORKTREE_PATH" && git rev-parse --show-toplevel`
+must equal WORKTREE_PATH. The full diff lives in the worktree, NOT the repo root.
+Run every command below from inside WORKTREE_PATH.
 
 Feature directory: FEATURE_DIRECTORY
 Branch: BRANCH_NAME
@@ -429,6 +463,7 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 | Plan subagent BLOCKED | Surface to user, stop pipeline |
 | Tasks has 0 test tasks | Re-dispatch tasks with explicit TDD instruction |
 | Worktree setup fails | Fall back to building on the feature branch directly; note it to the user |
+| Subagent worked in the repo root (reviewer reports "no changes"; implementer's commits aren't on the branch; planning branch dirty/worktree clean) | The dispatch omitted or the subagent ignored the worktree contract. Re-dispatch with the absolute `WORKTREE_PATH` block at the TOP of the prompt and the `cd … && git rev-parse --show-toplevel` self-check as the first action (see §5 dispatch contract) |
 | Implementer tries to re-plan | Re-dispatch with the "task list is the contract — execute, don't re-plan" rule restated |
 | Implementer NEEDS_CONTEXT | Provide context, re-dispatch same task |
 | Implementer BLOCKED | Escalate to user — do not force retry |

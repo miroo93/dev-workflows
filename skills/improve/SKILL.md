@@ -197,7 +197,9 @@ If `TEST_TASK_COUNT` is 0, re-dispatch with explicit TDD instruction.
 
 ### 4. Worktree isolation
 
-Invoke **`superpowers:using-git-worktrees`** to set up an isolated workspace on an `improve/<feature-slug>-<short-slug>` branch off `main`, with a green baseline (**[VERIFY]**). Record `WORKTREE_PATH`. For **T2** a worktree is optional; **T3** assumes isolation.
+Invoke **`superpowers:using-git-worktrees`** to set up an isolated workspace on an `improve/<feature-slug>-<short-slug>` branch off `main`, with a green baseline (**[VERIFY]**). Record the **absolute** `WORKTREE_PATH`. For **T2** a worktree is optional; **T3** assumes isolation.
+
+**Worktree dispatch contract (when a worktree is in use):** subagents start in the repo root, not the worktree — so every code/review subagent you dispatch (including the two reviewers reused from `/feature`) MUST carry the absolute `WORKTREE_PATH` at the top of its prompt and make `cd "WORKTREE_PATH" && git rev-parse --show-toplevel` (output must equal `WORKTREE_PATH`) its first action. Run all file ops and git commands from inside the worktree. See `/feature` §5 for the full contract — the prompt templates there already bake it in. Skipping this makes reviewers diff a clean branch and report "no changes". If building without a worktree (small T2), this contract doesn't apply.
 
 ---
 
@@ -218,7 +220,7 @@ After each slice/task, run the two reviewers from `/feature` (reuse those exact 
 
 ### 6. Verify
 
-Run directly, confirm output (`superpowers:verification-before-completion`):
+Run directly, confirm output (`superpowers:verification-before-completion`) — **from inside `WORKTREE_PATH`** when a worktree is in use (`cd` there first; the changed code lives in the worktree, not the repo root):
 
 1. New tests pass.
 2. **[VERIFY]** — zero errors. Paste relevant output.
@@ -270,6 +272,7 @@ Report the PR URL.
 | Change needs a schema change | Stop — schema changes need explicit user approval |
 | Change touches a frozen pattern | Surface to user — needs explicit authorization |
 | Implementer tries to re-plan (T3) | Re-dispatch: "tasks.md is the contract — execute, don't re-plan" |
+| Subagent worked in the repo root (reviewer reports "no changes"; commits missing from the branch) | Re-dispatch with the absolute `WORKTREE_PATH` block at the top and the `cd … && git rev-parse --show-toplevel` self-check first (see `/feature` §5 dispatch contract) |
 | Existing suite breaks after change | Treat as a regression — fix before PR |
 
 ## Done When
