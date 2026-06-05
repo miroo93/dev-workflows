@@ -16,6 +16,8 @@ End-to-end bug workflow for issues **you found while manually testing the app** 
 
 **Autonomy contract:** the agent diagnoses **autonomously** to root cause, then **GATES** — it presents the diagnosis + proposed fix and waits for your approval **before changing any code**. After approval it implements, verifies, and ships without further prompting.
 
+**Run mode (default = autonomous after the gate).** Like `/feature` and `/improve`, this skill is autonomous by default — it does not pause between reproduce → root cause → fix → verify → ship; the single mandatory pause is the **diagnosis gate** (step 3). If the user asks to slow down ("run slowly", "stop at each step", "walk me through it"), also pause to confirm at reproduce, root cause, and verify. The diagnosis gate and the stop-class are **always honored regardless of mode** — they are not waived by autonomous mode.
+
 ## Stack profile (READ FIRST)
 
 Load the project's **stack profile**: `.sdd/stack.md` (preferred) or `sdd-stack.md` at repo root. If neither exists, prompt the user to create one from the plugin's `templates/sdd-stack.template.md`, or auto-detect conservative defaults. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary from the profile. Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands*. The profile's **Backend-log tool** and **Spec location glob** drive the optional branches below.
@@ -117,10 +119,15 @@ Stay inside `superpowers:systematic-debugging` — **the Iron Law applies: NO FI
 - Why this is the root-cause fix (not a symptom patch): <reasoning>
 - Regression test: <the test you'll write first and what it asserts>
 - Risk / blast radius: <other code paths touched, any frozen-pattern concerns>
+- Stop-class check: <does the root-cause fix cross any one-way / high-cost boundary? Classify explicitly — none | schema/DB migration | security/auth/secrets boundary | frozen pattern | one-way door (data model, public API/contract shape, architecture — hard to reverse / costly to refactor later). If yes, say which and whether a smaller reversible fix exists.>
 - Spec impact: <none | spec is wrong and should be updated first>
 ```
 
 Then wait. Proceed to step 4 **only on explicit approval**. If the user rejects or wants to adjust, revise or stop. If `Spec impact` says the spec is wrong, fix `spec.md` first.
+
+**Stop-class — same as `/feature` and `/improve`.** A bug fix can itself be a one-way door (the root cause is "the data model is wrong" or "the auth check is in the wrong place"). When the `Stop-class check` is anything other than `none`, the gate becomes **extra firm**: spell out the irreversibility, prefer the smallest reversible fix that addresses the root cause, and get explicit approval for the boundary-crossing specifically — not just for "a fix" in general. If implementation *reveals* a stop-class boundary you didn't see at the gate (e.g. the minimal fix turns out to require a migration), **re-gate** before crossing it.
+
+**Non-interactive contexts (`/loop` / no live user).** The gate is interactive and **mandatory** — it cannot be auto-approved. With no human to approve, **stop at the gate and leave the diagnosis + proposed fix queued; never auto-apply a code fix.** (The incident carve-out below still applies — non-code mitigations to stop active bleed are always allowed.) This preserves the Iron Law: no fix ships without a human approving the diagnosis.
 
 **Incident carve-out (live bleed in progress):** the gate blocks **code changes**, not incident response. If damage is ongoing (e.g. a destructive job is still deleting records), **non-code mitigations are always allowed immediately and don't wait for the gate** — pause the cron/trigger or disable the job in the platform UI, flip a feature flag off, or roll back the last deploy. These stop the bleed in seconds without shipping unreviewed code. Recommend the mitigation **now**; the **code fix itself still goes through diagnosis → approval**. Don't let "every minute counts" collapse "stop the bleed" into "merge the patch" — they're separate actions.
 
@@ -182,6 +189,9 @@ Report the PR URL to the user.
 | Root cause is a frozen pattern | Surface to user — changing it needs explicit authorization |
 | Red test won't fail | The test doesn't capture the bug — revise reproduction before fixing |
 | Fix needs a schema change | Stop — schema changes need explicit user approval |
+| Fix crosses a security/auth boundary or touches secrets | Stop — classify it in the gate's stop-class check; get explicit approval for the boundary crossing, not just "a fix" |
+| Root-cause fix is a one-way door (data model, public API/contract, architecture — hard to reverse / costly to refactor) | Flag it at the gate as one-way; prefer the smallest reversible fix that fixes the root cause; cross only with explicit approval. If discovered mid-fix, re-gate |
+| No live user to approve the gate (`/loop`) | Stop at the gate; queue the diagnosis + proposed fix; never auto-apply (non-code bleed mitigations still allowed) |
 | User rejects the proposed fix | Revise diagnosis or hand off; do not implement |
 
 ## Done When
@@ -190,6 +200,7 @@ Report the PR URL to the user.
 - [ ] Bug reproduced consistently (or escalated for repro steps)
 - [ ] Root cause identified with evidence — not a symptom patch
 - [ ] Diagnosis + proposed fix approved by the user (the gate)
+- [ ] Stop-class classified in the gate (none / schema / security-auth-secrets / frozen pattern / one-way door); any boundary crossing was approved explicitly, and was re-gated if discovered mid-fix
 - [ ] Regression test written first, confirmed red, then green
 - [ ] Verify commands clean; existing suite green
 - [ ] For UI bugs: e2e smoke confirmed the fix (`PASS`, or `BLOCKED` with explicit go-ahead) — if the gate is enabled

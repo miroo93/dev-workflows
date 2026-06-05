@@ -45,6 +45,13 @@
 
 > Intentionally-fragile or load-bearing code that must NOT be casually refactored.
 > List file:area + why. If none, write "none".
+>
+> **These conventions + frozen patterns ARE your project's "constitution."** If you use
+> GitHub Spec-Kit, its `clarify`/`plan`/`analyze` commands read `/memory/constitution.md`
+> (project principles) and treat a violation as CRITICAL. Keep that file in sync with this
+> list (or generate it from this list) so the analyze gate has principles to check — and do
+> NOT maintain two divergent rule sources. If you don't use Spec-Kit, this list alone is the
+> constitution; it flows into every subagent as `[PROJECT CONTEXT]`.
 
 - <e.g. src/pages/Editor.jsx auto-save debounce + merge — prevents concurrent-write races; do not simplify>
 
