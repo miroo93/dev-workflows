@@ -13,7 +13,7 @@ Cross-check that the current feature's `spec.md`, `plan.md`, and `tasks.md` actu
 
 **READ-ONLY** — this never edits files. It produces a findings report; you act on it.
 
-Defers to the project's **spec layer** (`.sdd/stack.md` → *Spec / planning layer*):
+Defers to the project's **spec layer** (`docs/stack.md` → *Spec / planning layer*):
 
 - **GitHub Spec-Kit installed** → `EXECUTE_SKILL: speckit-analyze $ARGUMENTS`. It loads spec/plan/tasks (and `/memory/constitution.md` if present), builds a requirements↔tasks coverage map, and emits a severity-ranked findings table (CRITICAL/HIGH/MEDIUM/LOW) plus coverage %.
 - **Plain-markdown specs** → read the feature's `spec.md`, `plan.md`, `tasks.md` (and any `checklists/`) and report, without editing: (1) coverage gaps — requirements with no task, tasks with no requirement; (2) inconsistency — terminology drift, entities in plan absent from spec; (3) ambiguity — vague unmeasurable requirements, unresolved TODO markers; (4) over-build — plan/tasks beyond what the spec asked. Rank CRITICAL/HIGH/MEDIUM/LOW.

@@ -17,8 +17,8 @@ Flow: load stack profile → brainstorm → grill → spec → clarify → plan 
 
 This skill is stack-agnostic. Before doing anything, load the project's **stack profile**:
 
-1. Read `.sdd/stack.md` (preferred) or `sdd-stack.md` at the repo root.
-2. If neither exists, tell the user: *"No SDD stack profile found. Copy the plugin's `templates/sdd-stack.template.md` to `.sdd/stack.md` and fill it in, or I can proceed with conservative auto-detected defaults."* Then either wait or auto-detect (framework from `package.json`/lockfiles; verify commands from `scripts`).
+1. Read `docs/stack.md` (preferred) or `sdd-stack.md` at the repo root.
+2. If neither exists, tell the user: *"No SDD stack profile found. Copy the plugin's `templates/sdd-stack.template.md` to `docs/stack.md` and fill it in, or I can proceed with conservative auto-detected defaults."* Then either wait or auto-detect (framework from `package.json`/lockfiles; verify commands from `scripts`).
 3. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary built from the stack profile: stack line, binding context files, conventions, frozen patterns, verify commands. Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands* (run them in order).
 
 The stack profile is the single source of truth for stack specifics — never hardcode a framework, build command, or convention into the run.
@@ -137,7 +137,7 @@ This skill was written against a Spec-Kit-style spec layer (`/speckit-specify`, 
 - **Plain-markdown specs** → the spec/plan/tasks "subagents" just write the markdown artifacts (spec → plan → task checklist) into the profile's spec location; commit after each. The clarify (step 2), checklist (step 2b), and analyze (step 4b) gates still run, but as hand-rolled subagents (the fallbacks described in those steps) rather than Spec-Kit commands.
 - **No spec tooling configured ("none")** → **default to plain-markdown specs anyway.** Write a lightweight `spec.md` (overview, user stories, functional requirements, acceptance criteria) into `docs/specs/<NNN>-<slug>/` (or the repo's conventional location), then a short `plan.md` and `tasks.md`. Spec-Kit's clarify/checklist/analyze tooling is skipped (you may still run the lightweight hand-rolled analyze gate at step 4b), but the artifacts are still produced — so every non-trivial run leaves a written spec. Only the lightest scaling tier (< 30 min / < 3 files) may skip artifact generation, and even then the brainstorm/grill output must be captured as a short spec note in the PR description. Worktree + implement + review + finish still apply.
 
-**Constitution / principles (Spec-Kit's `constitution`).** Spec-Kit's `clarify`, `plan`, and `analyze` commands all read `/memory/constitution.md` (the project's non-negotiable principles) when it exists, and treat a constitution violation as CRITICAL. In dev-workflows that role is already played by the stack profile's **Conventions** and **frozen patterns** (`.sdd/stack.md`) — they ARE your constitution. So: if the project uses Spec-Kit's `analyze`/`clarify`, keep a `constitution.md` in sync with the stack profile's frozen patterns (or generate it from them) so the gate has principles to check; if there is no constitution, that's fine — the gate's constitution checks become no-ops and the stack profile still flows in as `[PROJECT CONTEXT]`. Do not maintain two divergent rule sources.
+**Constitution / principles (Spec-Kit's `constitution`).** Spec-Kit's `clarify`, `plan`, and `analyze` commands all read `/memory/constitution.md` (the project's non-negotiable principles) when it exists, and treat a constitution violation as CRITICAL. In dev-workflows that role is already played by the stack profile's **Conventions** and **frozen patterns** (`docs/stack.md`) — they ARE your constitution. So: if the project uses Spec-Kit's `analyze`/`clarify`, keep a `constitution.md` in sync with the stack profile's frozen patterns (or generate it from them) so the gate has principles to check; if there is no constitution, that's fine — the gate's constitution checks become no-ops and the stack profile still flows in as `[PROJECT CONTEXT]`. Do not maintain two divergent rule sources.
 
 **Do NOT adopt these Spec-Kit commands into this loop:**
 - **`speckit-implement`** — it is a *competing executor*. This skill's step 6 uses the Superpowers subagent-driven TDD loop instead (see Critical Handoff Rule 3). Running `speckit-implement` would fork the execution layer and bypass the worktree dispatch contract + per-task reviews. Use the standalone `/implement` skill only outside this pipeline.
@@ -582,7 +582,7 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 
 | Situation | Action |
 |-----------|--------|
-| No stack profile found | Prompt user to create `.sdd/stack.md`, or auto-detect conservative defaults |
+| No stack profile found | Prompt user to create `docs/stack.md`, or auto-detect conservative defaults |
 | No spec tooling configured ("none") | Still write plain-markdown `spec.md`/`plan.md`/`tasks.md` (default location `docs/specs/<NNN>-<slug>/`); only the lightest tier may skip, capturing the spec note in the PR instead |
 | Feature description vague | Run `superpowers:brainstorming` before spec (step 0 gate) |
 | Design decisions unresolved before spec | Run `grill-me` (step 0b gate) |

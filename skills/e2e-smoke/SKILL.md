@@ -11,7 +11,7 @@ soft-gates on. Logs in (per the stack profile's auth mode), drives a per-change 
 with Playwright MCP, captures evidence, tears down.
 
 This skill is **stack-agnostic** — all app specifics come from the project's **stack profile**
-(`.sdd/stack.md`, the `E2E smoke gate` block). If that block is `enabled: false` or missing,
+(`docs/stack.md`, the `E2E smoke gate` block). If that block is `enabled: false` or missing,
 the calling skill skips the e2e gate entirely.
 
 ## Inputs (from the calling skill)
@@ -37,7 +37,7 @@ the calling skill skips the e2e gate entirely.
 - Add `.e2e-smoke/` and `.env` to `.gitignore` if not already present.
 
 ## Step 0 — Load config from the stack profile (REQUIRED FIRST)
-**Read `.sdd/stack.md` and parse its `E2E smoke gate` block before anything else.** If the block is `enabled: false` or the file/block is missing, return `BLOCKED` reason "e2e gate not configured" (the caller decides whether that's a skip). Otherwise read `auth_mode` and branch to the matching procedure below.
+**Read `docs/stack.md` and parse its `E2E smoke gate` block before anything else.** If the block is `enabled: false` or the file/block is missing, return `BLOCKED` reason "e2e gate not configured" (the caller decides whether that's a skip). Otherwise read `auth_mode` and branch to the matching procedure below.
 
 Map profile keys → env vars you export (token-injection):
 

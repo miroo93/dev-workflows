@@ -1,7 +1,7 @@
 # SDD Stack Profile — Next.js + Supabase + Vercel — EXAMPLE
 
-> A worked example of `.sdd/stack.md` for a Next.js (App Router) + Supabase project
-> deployed on Vercel. Copy this to `.sdd/stack.md` in your project and adjust the
+> A worked example of `docs/stack.md` for a Next.js (App Router) + Supabase project
+> deployed on Vercel. Copy this to `docs/stack.md` in your project and adjust the
 > bracketed bits to match your actual conventions.
 
 ## Stack

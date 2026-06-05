@@ -2,7 +2,7 @@
 
 Stack-agnostic, intent-based spec-driven-development workflows for Claude Code. The same
 skills work on any stack (Next.js + Supabase, React + Vite, Rails, …) because everything
-stack-specific lives in a per-project **stack profile** (`.sdd/stack.md`) that the skills read
+stack-specific lives in a per-project **stack profile** (`docs/stack.md`) that the skills read
 at runtime instead of hardcoding a framework or build command.
 
 ## Skills
@@ -89,17 +89,17 @@ claude plugin install superpowers-chrome@superpowers-marketplace   # optional
 2. **Create the stack profile.** Copy the template and fill it in:
    ```bash
    mkdir -p .sdd
-   cp "$(claude plugin path dev-workflows)/templates/sdd-stack.template.md" .sdd/stack.md
-   $EDITOR .sdd/stack.md
+   cp "$(claude plugin path dev-workflows)/templates/sdd-stack.template.md" docs/stack.md
+   $EDITOR docs/stack.md
    ```
    (If `claude plugin path` isn't available, copy the template from this repo's
    `templates/sdd-stack.template.md`.) See `templates/examples/` for worked examples —
    including **`nextjs-supabase-vercel.stack.md`**.
-3. **(Optional) Configure the e2e gate.** Fill the `E2E smoke gate` block in `.sdd/stack.md`,
+3. **(Optional) Configure the e2e gate.** Fill the `E2E smoke gate` block in `docs/stack.md`,
    add `E2E_EMAIL`/`E2E_PASSWORD` to a **gitignored** `.env`, and add `.e2e-smoke/` + `.env`
    to `.gitignore`. Set `enabled: false` to skip the browser gate.
 
-The skills read `.sdd/stack.md` for the framework, conventions, verify commands,
+The skills read `docs/stack.md` for the framework, conventions, verify commands,
 frozen patterns, spec location, backend-log tool, and e2e config.
 
 ---
@@ -115,7 +115,7 @@ The full worked profile is in [`templates/examples/nextjs-supabase-vercel.stack.
 - **E2E auth mode** → use **`form-login`** (drive the real `/login` form). Supabase Auth uses cookie sessions, so the `token-injection` localStorage path usually doesn't apply unless you've built a custom JSON token endpoint. Set `app_url: http://localhost:3000` and `dev_command: npm run dev`.
 - **Spec layer** → plain markdown (`docs/specs/**/spec.md`) is the lowest-friction choice; run `specify init` only if you want full Spec-Kit.
 
-Drop that file in as `.sdd/stack.md`, tweak selectors/paths to your app, and the same `/feature` `/improve` `/troubleshoot` skills run unchanged.
+Drop that file in as `docs/stack.md`, tweak selectors/paths to your app, and the same `/feature` `/improve` `/troubleshoot` skills run unchanged.
 
 ---
 
@@ -137,7 +137,7 @@ The profile replaces everything the skills would otherwise hardcode:
 - The GitHub Spec-Kit `speckit-*` skills are **not** bundled — install Spec-Kit separately (`specify init`) if you want that layer. Otherwise the workflows default to plain-markdown specs (always written on non-trivial runs); Spec-Kit only adds clarify/checklist/analyze machinery on top. The `/spec`, `/plan`, `/tasks`, `/clarify`-equivalent, `/analyze`, `/checklist`, `/implement`, and `/tasks-to-issues` entry points defer to the matching `speckit-*` command when Spec-Kit is installed, and run a hand-rolled fallback otherwise.
 - **Two Spec-Kit commands are deliberately NOT wired into the `/feature`/`/improve` loop:** `speckit-implement` (a competing executor — the Superpowers subagent TDD loop replaces it) and `speckit-taskstoissues` (issue export for distributed teams — an alternative to the in-session loop, exposed only as the standalone `/tasks-to-issues`).
 - **Autonomous by default (answer upfront, then walk away).** `/feature` and `/improve` run **autonomously by default**: the interactive gates (grill + clarify, plus checklist scoping) are **front-loaded** into one block at the start, then the agent prints a **Decision Manifest** (resolved decisions + a deferred-decision policy) and runs to PR without per-step pauses. It stops only for the **stop-class** — schema/migrations, security/auth/secrets, frozen-pattern changes, and **one-way doors** (hard-to-reverse / costly-to-refactor choices). Ask to **"run slowly" / "stop at each step"** for **step-through** mode, which pauses at every step instead. (`/troubleshoot` is likewise autonomous after its mandatory diagnosis gate.) The split mirrors a hard rule: interactive steps (anything that asks *you*) run in the **main session**; non-interactive read-heavy steps (`analyze`, reviews) run in **subagents**.
-- **Constitution = your stack profile.** Spec-Kit's `clarify`/`plan`/`analyze` read `/memory/constitution.md` (project principles) and treat violations as CRITICAL. In dev-workflows the stack profile's **Conventions** and **frozen patterns** (`.sdd/stack.md`) play that role. If you use Spec-Kit's `analyze`, keep a `constitution.md` in sync with those frozen patterns (or skip it and the constitution checks become no-ops) — don't maintain two divergent rule sources.
+- **Constitution = your stack profile.** Spec-Kit's `clarify`/`plan`/`analyze` read `/memory/constitution.md` (project principles) and treat violations as CRITICAL. In dev-workflows the stack profile's **Conventions** and **frozen patterns** (`docs/stack.md`) play that role. If you use Spec-Kit's `analyze`, keep a `constitution.md` in sync with those frozen patterns (or skip it and the constitution checks become no-ops) — don't maintain two divergent rule sources.
 
 ## License
 

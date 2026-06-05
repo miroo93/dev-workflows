@@ -1,7 +1,7 @@
 # SDD Stack Profile — Minimal — EXAMPLE
 
 > The smallest useful profile: a stack line, verify commands, no specs, no e2e gate.
-> Good starting point for a small project or a quick trial. Copy to `.sdd/stack.md`.
+> Good starting point for a small project or a quick trial. Copy to `docs/stack.md`.
 
 ## Stack
 
