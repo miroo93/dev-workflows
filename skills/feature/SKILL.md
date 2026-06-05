@@ -44,21 +44,25 @@ Match the ceremony to the work. Assess from `$ARGUMENTS` (and a quick repo glanc
 
 If the work is clearly in the bottom two tiers, say so and propose the lighter path rather than running the whole thing. Proceed with the full pipeline only when the work justifies it (or the user insists).
 
-## Autonomous mode — front-load decisions, then run
+## Run mode — autonomous by default
 
-By default the run is **interactive**: each gate pauses for you as it comes. **Autonomous mode** instead front-loads every decision that needs a human into ONE block at the start, then runs to PR without interrupting — stopping only for the pre-agreed **stop-class** below. This is the "answer everything upfront, then walk away" workflow.
+**This skill runs autonomously by default.** It front-loads every decision that needs you into ONE block at the start (brainstorm → grill → spec draft → clarify → checklist scoping), prints a **Decision Manifest**, then runs all the way to the PR **without per-step pauses** — stopping only for the **stop-class** below. You do **not** need to ask for this; "answer the upfront questions, then let it run" is the default. (The upfront block still happens — autonomous means *no pausing after it*, not *never ask anything*.)
 
-**Trigger it** when the user signals it ("answer my questions then run autonomously", "don't interrupt me", "fire-and-forget"), or when running under `/loop` / any context with no live user. Otherwise stay interactive.
+**Switch to step-through (interactive) mode only when the user asks to slow down** — signals like *"run slowly"*, *"stop at each step"*, *"walk me through it"*, *"let's go step by step"*, *"checkpoint before each phase"*, *"ask me before X"*. In step-through mode, pause after each numbered step (spec, clarify, plan, tasks, analyze, before the worktree, and after each implement task) and wait for a go-ahead before continuing.
+
+Both modes run the **same gates and the same stop-class** — the only difference is whether you pause at *every* step (step-through) or *only* at the stop-class (autonomous default). Under `/loop` / no live user, see "Truly unattended" below.
 
 > **Why not just ask everything upfront?** Because the agent can't see execution-discovered decisions (analyze findings, review/test surprises) until the artifacts exist. Front-loading the *design/spec* decisions is reliable; the rest are governed by a **policy** you agree once — not by speculative upfront questions. This is the difference between front-loading and pretending to be clairvoyant.
 
-### How it reshapes the run
+### The autonomous run (default)
 
 1. **Front-loaded decision block (main session — you are present).** Run the interactive steps back-to-back, because they are the ONLY steps that need you: brainstorm (if vague) → grill (0b) → a fast spec draft (step 1, subagent) → clarify (step 2, `/speckit-clarify`, interactive) → checklist scoping (2b, if high-risk). Collect every answer here.
-2. **Decision Manifest — print it, get one "go".** A one-screen summary before going heads-down:
+2. **Decision Manifest.** A one-screen summary before going heads-down:
    - **Resolved:** each design/spec decision and the answer taken.
    - **Deferred-decision policy:** the auto-resolve and stop classes below (so you know exactly what the agent will and won't decide alone).
    - **Open `NEEDS_CLARIFICATION`:** anything unresolved — routed to the stop-class or a batched end-of-run question.
+
+   In **autonomous (default)** mode, print the Manifest and **proceed** — you just answered the upfront block, so interject only if you want to adjust. In **step-through** mode, **wait for an explicit "go"** here and at each subsequent step.
 3. **Autonomous chain (subagents).** plan → tasks → analyze → worktree → implement loop → reviews → final → e2e → finish. No pausing except the stop-class.
 
 ### Deferred-decision policy
@@ -149,7 +153,7 @@ Before starting:
 3. Apply **Scaling Guidance**. If too small for the full pipeline, propose the lighter path and stop unless the user wants the full run.
 4. If your spec layer tracks an "active feature" pointer, check it — if a feature is already in progress, **stop and ask** whether to continue it or start new. This pause is **mandatory and non-waivable** (a blanket "move fast / I trust you" does NOT waive it): starting a new feature over an active one silently corrupts the other feature's branch/spec state.
 5. Verify you are **not** on `main`/`master`. If you are, create a feature branch (your spec tooling's hook may do this automatically — confirm it succeeds).
-6. **Pick the mode.** If the user wants to answer everything upfront and then leave it running (or there's no live user / you're under `/loop`), follow **Autonomous mode** (above): run the interactive gates (brainstorm → grill → spec draft → clarify → checklist) as one front-loaded block, print the **Decision Manifest**, then run the rest under the deferred-decision policy. Otherwise run interactively (gates pause as they come). State which mode you're in.
+6. **Confirm the run mode (default = autonomous).** Unless the user asked to slow down, run in **autonomous** mode (see *Run mode* above): front-load the interactive gates (brainstorm → grill → spec draft → clarify → checklist) as one block, print the **Decision Manifest**, then run to PR under the deferred-decision policy, stopping only at the stop-class. Switch to **step-through** only on an explicit signal ("run slowly", "stop at each step", "walk me through it"). Under `/loop` / no live user, run unattended. State the mode in one line before proceeding.
 
 **Brainstorm gate (conditional):** If the feature description is vague, exploratory, or ambiguous (uncertainty words like "maybe", "some kind of", under-specified scope, multiple plausible interpretations), invoke **`superpowers:brainstorming`** first to clarify requirements and surface alternatives before any spec is written. The brainstormed requirements become the input to step 1.
 
@@ -602,7 +606,7 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 ## Done When
 
 - [ ] Stack profile loaded; stack specifics came from it (not hardcoded)
-- [ ] Mode stated (interactive vs autonomous); if autonomous, the front-loaded decision block ran and a Decision Manifest (resolved decisions + deferred-decision policy) was shown before going heads-down
+- [ ] Run mode stated (autonomous by default; step-through only if asked); the front-loaded decision block ran and a Decision Manifest (resolved decisions + deferred-decision policy) was shown before going heads-down
 - [ ] No stop-class decision (schema/migration, security/auth/secrets, frozen pattern, or one-way door) was made without surfacing it to the user
 - [ ] Scaling tier assessed — full pipeline was the right ceremony (or lighter path taken)
 - [ ] A written `spec.md` artifact exists for this work (any non-trivial run; the lightest tier instead captured a spec note in the PR description)

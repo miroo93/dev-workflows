@@ -50,9 +50,9 @@ Match the ceremony to the change. Assess from `$ARGUMENTS` + a quick look at the
 
 State the chosen tier to the user before proceeding. If T1, propose the inline path and stop unless they want more ceremony.
 
-## Autonomous mode — front-load decisions, then run
+## Run mode — autonomous by default
 
-Same contract as **`/feature` → "Autonomous mode"** (see that skill for the full description); it applies to **T2/T3** here (T1 is already a single direct edit). **Trigger it** when the user wants to answer upfront then leave it run, or under `/loop` / no live user.
+Same contract as **`/feature` → "Run mode"** (see that skill for the full description). **Autonomous is the default** for **T2/T3** (T1 is a single direct edit, so the question doesn't arise): front-load the interactive gates, print the Decision Manifest, then run to PR stopping only at the stop-class. **Switch to step-through** only when the user asks to slow down ("run slowly", "stop at each step", "walk me through it"). Under `/loop` / no live user, run unattended.
 
 - **Front-loaded block (main session):** grill (1b, if used) → amend spec → clarify (`/speckit-clarify`, interactive). For `/improve` the upfront decisions are about the **delta** — which fields/components change, migration/access-control impact, edge cases against existing behavior.
 - **Decision Manifest** before going heads-down: resolved delta decisions + the deferred-decision policy.
@@ -111,7 +111,7 @@ digraph improve {
 
 ### 1. Assess the change + pick a tier
 
-Apply **Scaling Guidance**. State the tier and your reasoning. Also **pick the mode** (interactive vs **Autonomous mode** above) and state it — for T2/T3, if the user wants to answer upfront then leave it run, front-load grill+clarify and print the Decision Manifest before going heads-down.
+Apply **Scaling Guidance**. State the tier and your reasoning. Also state the **run mode**: for T2/T3, **autonomous by default** (front-load grill+clarify, print the Decision Manifest, then run to PR stopping only at the stop-class); switch to **step-through** only if the user asked to slow down.
 
 - **T1** → go to the T1 path, then stop.
 - **T2 / T3** → continue to step 2.
@@ -306,7 +306,7 @@ Report the PR URL.
 
 - [ ] Stack profile loaded; stack specifics came from it
 - [ ] Tier assessed and stated; ceremony matched the change
-- [ ] Mode stated (interactive vs autonomous); if autonomous, grill+clarify were front-loaded and a Decision Manifest shown, and no stop-class decision (schema/migration, security/auth/secrets, frozen pattern, one-way door, or a backward-incompatible change) was made without surfacing it
+- [ ] Run mode stated (autonomous by default for T2/T3; step-through only if asked); grill+clarify were front-loaded and a Decision Manifest shown, and no stop-class decision (schema/migration, security/auth/secrets, frozen pattern, one-way door, or a backward-incompatible change) was made without surfacing it
 - [ ] Existing feature + spec resolved (or routed to `/feature`)
 - [ ] A `spec.md` exists and was amended before code for T2/T3 (created-then-amended if none existed); only pure T1 with no behavior change may skip
 - [ ] For T3: analyze gate (§3b) ran after plan/tasks regen and returned CLEAN (delta fully covered, no contradictions) before the worktree

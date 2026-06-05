@@ -16,6 +16,8 @@ End-to-end bug workflow for issues **you found while manually testing the app** 
 
 **Autonomy contract:** the agent diagnoses **autonomously** to root cause, then **GATES** — it presents the diagnosis + proposed fix and waits for your approval **before changing any code**. After approval it implements, verifies, and ships without further prompting.
 
+**Run mode (default = autonomous after the gate).** Like `/feature` and `/improve`, this skill is autonomous by default — it does not pause between reproduce → root cause → fix → verify → ship; the single mandatory pause is the **diagnosis gate** (step 3). If the user asks to slow down ("run slowly", "stop at each step", "walk me through it"), also pause to confirm at reproduce, root cause, and verify. The diagnosis gate and the stop-class are **always honored regardless of mode** — they are not waived by autonomous mode.
+
 ## Stack profile (READ FIRST)
 
 Load the project's **stack profile**: `.sdd/stack.md` (preferred) or `sdd-stack.md` at repo root. If neither exists, prompt the user to create one from the plugin's `templates/sdd-stack.template.md`, or auto-detect conservative defaults. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary from the profile. Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands*. The profile's **Backend-log tool** and **Spec location glob** drive the optional branches below.
