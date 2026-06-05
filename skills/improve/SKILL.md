@@ -50,6 +50,16 @@ Match the ceremony to the change. Assess from `$ARGUMENTS` + a quick look at the
 
 State the chosen tier to the user before proceeding. If T1, propose the inline path and stop unless they want more ceremony.
 
+## Autonomous mode — front-load decisions, then run
+
+Same contract as **`/feature` → "Autonomous mode"** (see that skill for the full description); it applies to **T2/T3** here (T1 is already a single direct edit). **Trigger it** when the user wants to answer upfront then leave it run, or under `/loop` / no live user.
+
+- **Front-loaded block (main session):** grill (1b, if used) → amend spec → clarify (`/speckit-clarify`, interactive). For `/improve` the upfront decisions are about the **delta** — which fields/components change, migration/access-control impact, edge cases against existing behavior.
+- **Decision Manifest** before going heads-down: resolved delta decisions + the deferred-decision policy.
+- **Autonomous chain (subagents):** plan/tasks (T3) → analyze (3b) → worktree → implement loop → reviews → verify → finish.
+
+**STOP-class (never guess; halt and surface even mid-run)** — identical to `/feature`: **schema / DB migrations** · **security / auth / secrets** · **frozen-pattern changes** · **one-way doors** (any hard-to-reverse choice with medium/significant refactoring or long-term maintenance cost — architecture, public API/contract shape, data model, framework/dependency choice, irreversible data ops; when unsure, treat as one-way and stop). `/improve` touches **working** code, so add one more reflex: **a change that would break backward compatibility** for existing callers/data is a one-way door — stop. Everything else (coverage gaps fixable by amending an artifact, convention-default ambiguities, MEDIUM/LOW analyze findings) is auto-resolve-and-log.
+
 ## Process Overview
 
 ```dot
@@ -101,7 +111,7 @@ digraph improve {
 
 ### 1. Assess the change + pick a tier
 
-Apply **Scaling Guidance**. State the tier and your reasoning.
+Apply **Scaling Guidance**. State the tier and your reasoning. Also **pick the mode** (interactive vs **Autonomous mode** above) and state it — for T2/T3, if the user wants to answer upfront then leave it run, front-load grill+clarify and print the Decision Manifest before going heads-down.
 
 - **T1** → go to the T1 path, then stop.
 - **T2 / T3** → continue to step 2.
@@ -296,6 +306,7 @@ Report the PR URL.
 
 - [ ] Stack profile loaded; stack specifics came from it
 - [ ] Tier assessed and stated; ceremony matched the change
+- [ ] Mode stated (interactive vs autonomous); if autonomous, grill+clarify were front-loaded and a Decision Manifest shown, and no stop-class decision (schema/migration, security/auth/secrets, frozen pattern, one-way door, or a backward-incompatible change) was made without surfacing it
 - [ ] Existing feature + spec resolved (or routed to `/feature`)
 - [ ] A `spec.md` exists and was amended before code for T2/T3 (created-then-amended if none existed); only pure T1 with no behavior change may skip
 - [ ] For T3: analyze gate (§3b) ran after plan/tasks regen and returned CLEAN (delta fully covered, no contradictions) before the worktree

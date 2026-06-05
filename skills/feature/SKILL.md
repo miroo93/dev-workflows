@@ -44,6 +44,43 @@ Match the ceremony to the work. Assess from `$ARGUMENTS` (and a quick repo glanc
 
 If the work is clearly in the bottom two tiers, say so and propose the lighter path rather than running the whole thing. Proceed with the full pipeline only when the work justifies it (or the user insists).
 
+## Autonomous mode — front-load decisions, then run
+
+By default the run is **interactive**: each gate pauses for you as it comes. **Autonomous mode** instead front-loads every decision that needs a human into ONE block at the start, then runs to PR without interrupting — stopping only for the pre-agreed **stop-class** below. This is the "answer everything upfront, then walk away" workflow.
+
+**Trigger it** when the user signals it ("answer my questions then run autonomously", "don't interrupt me", "fire-and-forget"), or when running under `/loop` / any context with no live user. Otherwise stay interactive.
+
+> **Why not just ask everything upfront?** Because the agent can't see execution-discovered decisions (analyze findings, review/test surprises) until the artifacts exist. Front-loading the *design/spec* decisions is reliable; the rest are governed by a **policy** you agree once — not by speculative upfront questions. This is the difference between front-loading and pretending to be clairvoyant.
+
+### How it reshapes the run
+
+1. **Front-loaded decision block (main session — you are present).** Run the interactive steps back-to-back, because they are the ONLY steps that need you: brainstorm (if vague) → grill (0b) → a fast spec draft (step 1, subagent) → clarify (step 2, `/speckit-clarify`, interactive) → checklist scoping (2b, if high-risk). Collect every answer here.
+2. **Decision Manifest — print it, get one "go".** A one-screen summary before going heads-down:
+   - **Resolved:** each design/spec decision and the answer taken.
+   - **Deferred-decision policy:** the auto-resolve and stop classes below (so you know exactly what the agent will and won't decide alone).
+   - **Open `NEEDS_CLARIFICATION`:** anything unresolved — routed to the stop-class or a batched end-of-run question.
+3. **Autonomous chain (subagents).** plan → tasks → analyze → worktree → implement loop → reviews → final → e2e → finish. No pausing except the stop-class.
+
+### Deferred-decision policy
+
+**Auto-resolve — decide, log it in the Manifest/PR, continue. Never interrupt for these:**
+- Coverage gaps the analyze gate (4b) flags that you can fix by amending spec/plan/tasks.
+- Ambiguities with an obvious project-convention default.
+- Non-critical analyze findings (MEDIUM/LOW) and review nits.
+- Anything already answered in the front-loaded block.
+
+**STOP and queue — never guess; halt, surface, wait — even mid-autonomous-run:**
+- **Schema / DB migrations** — any change to data shape or a migration.
+- **Security / auth / secrets** — auth, access-control, the security boundary, anything touching secrets.
+- **Frozen-pattern changes** — touching a stack-profile frozen pattern (already needs explicit authorization).
+- **One-way doors** — any hard-to-reverse choice that would impose medium/significant refactoring or long-term maintenance cost to change later: architecture, public API / contract shape, data model, framework or dependency choice, irreversible data operations. **When unsure whether a door is one-way, treat it as one-way and stop.**
+
+Questions outside both classes are **batched** and surfaced at the next natural checkpoint (before the worktree) or in the PR body — never one-at-a-time interruptions.
+
+### Truly unattended (`/loop`, no human at all)
+
+There is no one to answer the front-loaded block: skip grill and `/speckit-clarify` (both interactive), auto-resolve clarifications from project conventions, and record the rest as `NEEDS_CLARIFICATION`. The stop-class becomes a **hard halt** — on any stop-class decision, stop the run and leave the queued decision for a human rather than guessing.
+
 ## Process Overview
 
 ```dot
@@ -52,7 +89,7 @@ digraph pipeline {
     "0. Brainstorm (if vague)" [shape=box];
     "0b. Grill design decisions" [shape=box];
     "1. Spec (subagent)" [shape=box];
-    "2. Clarify (subagent)" [shape=box];
+    "2. Clarify" [shape=box];
     "2b. Checklist gate (optional, T3/high-risk)" [shape=box];
     "3. Plan (subagent)" [shape=box];
     "4. Tasks (subagent)" [shape=box];
@@ -65,8 +102,8 @@ digraph pipeline {
 
     "0. Brainstorm (if vague)" -> "0b. Grill design decisions";
     "0b. Grill design decisions" -> "1. Spec (subagent)";
-    "1. Spec (subagent)" -> "2. Clarify (subagent)";
-    "2. Clarify (subagent)" -> "2b. Checklist gate (optional, T3/high-risk)";
+    "1. Spec (subagent)" -> "2. Clarify";
+    "2. Clarify" -> "2b. Checklist gate (optional, T3/high-risk)";
     "2b. Checklist gate (optional, T3/high-risk)" -> "3. Plan (subagent)";
     "3. Plan (subagent)" -> "4. Tasks (subagent)";
     "4. Tasks (subagent)" -> "4b. Analyze gate (cross-artifact, read-only)";
@@ -112,6 +149,7 @@ Before starting:
 3. Apply **Scaling Guidance**. If too small for the full pipeline, propose the lighter path and stop unless the user wants the full run.
 4. If your spec layer tracks an "active feature" pointer, check it — if a feature is already in progress, **stop and ask** whether to continue it or start new. This pause is **mandatory and non-waivable** (a blanket "move fast / I trust you" does NOT waive it): starting a new feature over an active one silently corrupts the other feature's branch/spec state.
 5. Verify you are **not** on `main`/`master`. If you are, create a feature branch (your spec tooling's hook may do this automatically — confirm it succeeds).
+6. **Pick the mode.** If the user wants to answer everything upfront and then leave it running (or there's no live user / you're under `/loop`), follow **Autonomous mode** (above): run the interactive gates (brainstorm → grill → spec draft → clarify → checklist) as one front-loaded block, print the **Decision Manifest**, then run the rest under the deferred-decision policy. Otherwise run interactively (gates pause as they come). State which mode you're in.
 
 **Brainstorm gate (conditional):** If the feature description is vague, exploratory, or ambiguous (uncertainty words like "maybe", "some kind of", under-specified scope, multiple plausible interpretations), invoke **`superpowers:brainstorming`** first to clarify requirements and surface alternatives before any spec is written. The brainstormed requirements become the input to step 1.
 
@@ -157,6 +195,8 @@ Wait for result. On BLOCKED: surface the blocker to the user and stop.
 Resolve underspecified areas before planning. If the spec subagent reported `OPEN_CLARIFICATIONS: 0` and the feature is straightforward, you may skip.
 
 **If Spec-Kit is the spec layer → invoke `/speckit-clarify` instead of hand-rolling.** Run `EXECUTE_SKILL: speckit-clarify` (no arguments needed — it operates on the active feature's `spec.md`). It performs a taxonomy-driven coverage scan, asks up to 5 targeted questions one at a time (each leading with a recommended answer), encodes every answer back into `spec.md` under a dated `## Clarifications` log, and re-validates `checklists/requirements.md` if step 2b produced one. This is strictly better than the hand-rolled prompt below — prefer it whenever Spec-Kit is installed. (This is also what the *Spec layer adaptation* section above mandates; the two now agree.)
+
+**Run `/speckit-clarify` in the MAIN session, not a subagent** — it is interactive (asks you questions and waits). A dispatched subagent has no channel to reach you and would hang, fabricate answers, or silently skip the questions. The *hand-rolled* clarify below is the opposite: it's non-interactive (auto-resolves from project conventions, escalates only genuine decisions), so **it** can be a subagent. Pick by interactivity: the thing that asks *you* stays in the main session.
 
 > **Non-interactive contexts** (`/loop`, autonomous, no live user): skip `/speckit-clarify` — it is interactive. Leave the `NEEDS_CLARIFICATION` markers in place for a human pass, or auto-resolve only markers with an obvious project-convention default.
 
@@ -520,8 +560,8 @@ This pipeline runs multiple subagents to protect the main context window:
 | Brainstorm | main session | Interactive with the user |
 | Grill | main session | Interactive design stress-test; needs a live user |
 | Spec | subagent | Reads many template files; isolate |
-| Clarify | subagent (or `/speckit-clarify`) | Reads spec + schemas |
-| Checklist (2b, optional) | subagent (or `/speckit-checklist`) | Requirements-quality items; high-risk only |
+| Clarify | **main session** if `/speckit-clarify` (interactive — asks you); **subagent** if the hand-rolled auto-resolve clarify (non-interactive) | A dispatched subagent can't ask you — interactivity decides where it runs |
+| Checklist (2b, optional) | **subagent** if you pass the focus dimension (runs headless on defaults); **main session** if you want to answer its scoping questions | High-risk only |
 | Plan | subagent | Reads spec + templates |
 | Tasks | subagent | Reads plan + spec; outputs large file |
 | Analyze (4b) | subagent (or `/speckit-analyze`) | Read-only cross-artifact consistency before code |
@@ -562,6 +602,8 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 ## Done When
 
 - [ ] Stack profile loaded; stack specifics came from it (not hardcoded)
+- [ ] Mode stated (interactive vs autonomous); if autonomous, the front-loaded decision block ran and a Decision Manifest (resolved decisions + deferred-decision policy) was shown before going heads-down
+- [ ] No stop-class decision (schema/migration, security/auth/secrets, frozen pattern, or one-way door) was made without surfacing it to the user
 - [ ] Scaling tier assessed — full pipeline was the right ceremony (or lighter path taken)
 - [ ] A written `spec.md` artifact exists for this work (any non-trivial run; the lightest tier instead captured a spec note in the PR description)
 - [ ] Clarify gate ran (`/speckit-clarify` when Spec-Kit present, else the hand-rolled subagent) — or was deliberately skipped (straightforward / non-interactive)
