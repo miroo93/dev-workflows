@@ -9,12 +9,13 @@ at runtime instead of hardcoding a framework or build command.
 
 | Skill | Use when… |
 |-------|-----------|
-| `/feature` | Build a **new** feature end-to-end (brainstorm → grill → spec → plan → tasks → worktree → TDD build with per-task review → PR). |
+| `/feature` | Build a **new** feature end-to-end (brainstorm → grill → spec → clarify → plan → tasks → analyze gate → worktree → TDD build with per-task review → PR). |
 | `/improve` | **Change/extend** an existing feature that works as specified. Amends the spec first, then a scope-matched build. |
 | `/troubleshoot` | **Fix a bug** you hit while manually testing. Root-cause gate (no fix before root cause) → test-first fix → PR. |
 | `/grill-me` | Stress-test a plan/design — relentless one-decision-at-a-time interview via `AskUserQuestion`. Used as a gate by `/feature` and `/improve`. |
 | `e2e-smoke` | *(internal)* Real-browser smoke gate invoked by the three workflows. Returns PASS/FAIL/BLOCKED. |
 | `/spec` `/plan` `/tasks` `/implement` | Thin entry points that defer to your spec layer (GitHub Spec-Kit if installed, plain markdown, or none). |
+| `/analyze` `/checklist` `/tasks-to-issues` | More spec-layer entry points. `/analyze` = read-only cross-artifact consistency check (spec vs plan vs tasks) before coding — built into `/feature` (§4b) and `/improve` (§3b). `/checklist` = requirements-quality checklist ("unit tests for the English") for a risk dimension. `/tasks-to-issues` = export `tasks.md` to GitHub issues for human/distributed tracking (an alternative to the in-session build loop, not a step in it). |
 | `/pr` | Get the current branch's work onto the **right** PR: checks the **live** PR status, rebases onto base, resolves conflicts, verifies, and pushes (`--force-with-lease`). Updates the open PR, or opens a **new** one if the branch's PR was already merged. |
 | `/writing-skills` | Author or update the skills in this repo using TDD-for-skills (RED baseline → GREEN minimal skill → REFACTOR to close loopholes). Vendored from [Superpowers](https://github.com/obra/superpowers) — see `skills/writing-skills/ATTRIBUTION.md`. |
 
@@ -133,7 +134,9 @@ The profile replaces everything the skills would otherwise hardcode:
 
 - These skills **orchestrate** Superpowers skills by name. Without `superpowers`, the workflows lose their execution discipline (TDD loop, worktrees, branch finish) — install it.
 - `skills/e2e-smoke/e2e-smoke.sh` supports **token-injection** auth out of the box (mint a token from a JSON login endpoint, inject into `localStorage`). **Form-login** and **public** apps are driven directly by the `e2e-smoke` skill via Playwright MCP using only the script's `serve`/`teardown`.
-- The GitHub Spec-Kit `speckit-*` skills are **not** bundled — install Spec-Kit separately (`specify init`) if you want that layer. Otherwise the workflows default to plain-markdown specs (always written on non-trivial runs); Spec-Kit only adds clarify/analyze machinery on top.
+- The GitHub Spec-Kit `speckit-*` skills are **not** bundled — install Spec-Kit separately (`specify init`) if you want that layer. Otherwise the workflows default to plain-markdown specs (always written on non-trivial runs); Spec-Kit only adds clarify/checklist/analyze machinery on top. The `/spec`, `/plan`, `/tasks`, `/clarify`-equivalent, `/analyze`, `/checklist`, `/implement`, and `/tasks-to-issues` entry points defer to the matching `speckit-*` command when Spec-Kit is installed, and run a hand-rolled fallback otherwise.
+- **Two Spec-Kit commands are deliberately NOT wired into the `/feature`/`/improve` loop:** `speckit-implement` (a competing executor — the Superpowers subagent TDD loop replaces it) and `speckit-taskstoissues` (issue export for distributed teams — an alternative to the in-session loop, exposed only as the standalone `/tasks-to-issues`).
+- **Constitution = your stack profile.** Spec-Kit's `clarify`/`plan`/`analyze` read `/memory/constitution.md` (project principles) and treat violations as CRITICAL. In dev-workflows the stack profile's **Conventions** and **frozen patterns** (`.sdd/stack.md`) play that role. If you use Spec-Kit's `analyze`, keep a `constitution.md` in sync with those frozen patterns (or skip it and the constitution checks become no-ops) — don't maintain two divergent rule sources.
 
 ## License
 

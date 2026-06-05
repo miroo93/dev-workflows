@@ -61,6 +61,7 @@ digraph improve {
     "1b. Grill design decisions" [shape=box];
     "2. Amend spec" [shape=box];
     "3. Regenerate plan/tasks (T3 only)" [shape=box];
+    "3b. Analyze gate (T3, read-only)" [shape=box];
     "4. Worktree isolation" [shape=box];
     "5. Implement (TDD + 2-stage review)" [shape=box];
     "6. Verify (lint/build + suite)" [shape=box];
@@ -73,7 +74,8 @@ digraph improve {
     "1. Assess change + pick tier" -> "1b. Grill design decisions" [label="T2 / T3"];
     "1b. Grill design decisions" -> "2. Amend spec";
     "2. Amend spec" -> "3. Regenerate plan/tasks (T3 only)";
-    "3. Regenerate plan/tasks (T3 only)" -> "4. Worktree isolation";
+    "3. Regenerate plan/tasks (T3 only)" -> "3b. Analyze gate (T3, read-only)";
+    "3b. Analyze gate (T3, read-only)" -> "4. Worktree isolation";
     "4. Worktree isolation" -> "5. Implement (TDD + 2-stage review)";
     "5. Implement (TDD + 2-stage review)" -> "6. Verify (lint/build + suite)";
     "6. Verify (lint/build + suite)" -> "7. Finish / PR";
@@ -149,7 +151,7 @@ Return:
 - STATUS: DONE or BLOCKED with reason
 ```
 
-If `OPEN_CLARIFICATIONS > 0` and non-trivial, clarify (or surface genuine product decisions to the user) before planning — same gate as `/feature`.
+If `OPEN_CLARIFICATIONS > 0` and non-trivial, run the clarify gate before planning — same as `/feature` step 2: **when Spec-Kit is the spec layer, `EXECUTE_SKILL: speckit-clarify`** (it scans the amended spec, asks up to 5 recommended-answer-first questions, and writes the answers back under a dated `## Clarifications` log); otherwise resolve ambiguities with a hand-rolled clarify pass or surface genuine product decisions to the user. Skip `/speckit-clarify` in non-interactive contexts (`/loop`).
 
 ---
 
@@ -192,6 +194,19 @@ Return: TASKS_FILE, TASK_COUNT, TEST_TASK_COUNT (must be > 0), TASKS_SUMMARY, ST
 ```
 
 If `TEST_TASK_COUNT` is 0, re-dispatch with explicit TDD instruction.
+
+---
+
+### 3b. Analyze — cross-artifact consistency gate (T3 only, read-only)
+
+For **T3**, after the plan/tasks are regenerated, verify the amended `spec.md`, `plan.md`, and `tasks.md` still agree **before** the worktree — same gate as `/feature` step 4b. Because `/improve` edits *working* code, the highest-value check here is that the **delta** is fully covered: every changed/added requirement has a task, no task references a requirement the amendment removed, and terminology stayed consistent with the parts of the spec you did NOT touch.
+
+**READ-ONLY — never edits files.**
+
+- **Spec-Kit present** → `EXECUTE_SKILL: speckit-analyze` (loads spec/plan/tasks + constitution; emits a severity-ranked findings table + coverage %).
+- **Plain-markdown / none** → dispatch the lightweight read-only analyze subagent from `/feature` §4b, but tell it to focus on the **changed sections** (`CHANGED_SECTIONS` from step 2) and on regressions against unchanged requirements.
+
+Act on the result as in `/feature` §4b: **CRITICAL/HIGH** → fix the offending artifact (amend spec + re-clarify, or re-dispatch the scoped plan/tasks) and re-run until CLEAN; **MEDIUM/LOW** → proceed and flag for the reviewers. **T2 skips this gate** (single-slice change, no regenerated plan/tasks to drift).
 
 ---
 
@@ -250,8 +265,9 @@ Report the PR URL.
 | Resolve feature | (inline `find`/`grep` via profile's spec glob) | Locate the existing spec — the behavior baseline |
 | Clarify the change | `superpowers:brainstorming` | Pin down vague change requests before amending |
 | Grill the design | `grill-me` | Resolve the change's design tree (T3 recommended) before amending |
-| Amend spec | spec layer (amend) + clarify | Update the contract first |
+| Amend spec | spec layer (amend) + clarify (`/speckit-clarify` if Spec-Kit) | Update the contract first |
 | Plan/tasks (T3) | spec layer plan/tasks | Scoped to the delta only |
+| Analyze (T3) | `/speckit-analyze` or read-only subagent | Cross-artifact consistency on the delta before code (§3b) |
 | Isolation | `superpowers:using-git-worktrees` | Don't disturb the working tree |
 | Build | `superpowers:test-driven-development` / `superpowers:subagent-driven-development` | TDD; per-task loop for T3 |
 | Review | (the two reviewer prompts from `/feature`) | Spec-compliance + code-quality on every change |
@@ -271,6 +287,7 @@ Report the PR URL.
 | Reported behavior is actually a bug | Route to `/troubleshoot` (improve = change correct behavior) |
 | Change needs a schema change | Stop — schema changes need explicit user approval |
 | Change touches a frozen pattern | Surface to user — needs explicit authorization |
+| Analyze gate (T3) finds CRITICAL/HIGH on the delta | Fix the artifact before the worktree (amend spec + re-clarify, or re-dispatch scoped plan/tasks); re-run until CLEAN (§3b) |
 | Implementer tries to re-plan (T3) | Re-dispatch: "tasks.md is the contract — execute, don't re-plan" |
 | Subagent worked in the repo root (reviewer reports "no changes"; commits missing from the branch) | Re-dispatch with the absolute `WORKTREE_PATH` block at the top and the `cd … && git rev-parse --show-toplevel` self-check first (see `/feature` §5 dispatch contract) |
 | Existing suite breaks after change | Treat as a regression — fix before PR |
@@ -281,6 +298,7 @@ Report the PR URL.
 - [ ] Tier assessed and stated; ceremony matched the change
 - [ ] Existing feature + spec resolved (or routed to `/feature`)
 - [ ] A `spec.md` exists and was amended before code for T2/T3 (created-then-amended if none existed); only pure T1 with no behavior change may skip
+- [ ] For T3: analyze gate (§3b) ran after plan/tasks regen and returned CLEAN (delta fully covered, no contradictions) before the worktree
 - [ ] New tests written first (red → green); change implemented to spec
 - [ ] Two-stage review passed (spec-compliance + code-quality)
 - [ ] Verify commands clean; **full existing suite still green**

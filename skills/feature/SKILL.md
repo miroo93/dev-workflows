@@ -53,22 +53,28 @@ digraph pipeline {
     "0b. Grill design decisions" [shape=box];
     "1. Spec (subagent)" [shape=box];
     "2. Clarify (subagent)" [shape=box];
+    "2b. Checklist gate (optional, T3/high-risk)" [shape=box];
     "3. Plan (subagent)" [shape=box];
     "4. Tasks (subagent)" [shape=box];
+    "4b. Analyze gate (cross-artifact, read-only)" [shape=box];
     "5. Worktree isolation" [shape=box];
     "6. Implement loop (TDD)" [shape=box];
-    "7. Finish / PR" [shape=box];
+    "7. Final validation" [shape=box];
+    "8. Finish / PR" [shape=box];
     "DONE" [shape=doublecircle];
 
     "0. Brainstorm (if vague)" -> "0b. Grill design decisions";
     "0b. Grill design decisions" -> "1. Spec (subagent)";
     "1. Spec (subagent)" -> "2. Clarify (subagent)";
-    "2. Clarify (subagent)" -> "3. Plan (subagent)";
+    "2. Clarify (subagent)" -> "2b. Checklist gate (optional, T3/high-risk)";
+    "2b. Checklist gate (optional, T3/high-risk)" -> "3. Plan (subagent)";
     "3. Plan (subagent)" -> "4. Tasks (subagent)";
-    "4. Tasks (subagent)" -> "5. Worktree isolation";
+    "4. Tasks (subagent)" -> "4b. Analyze gate (cross-artifact, read-only)";
+    "4b. Analyze gate (cross-artifact, read-only)" -> "5. Worktree isolation";
     "5. Worktree isolation" -> "6. Implement loop (TDD)";
-    "6. Implement loop (TDD)" -> "7. Finish / PR";
-    "7. Finish / PR" -> "DONE";
+    "6. Implement loop (TDD)" -> "7. Final validation";
+    "7. Final validation" -> "8. Finish / PR";
+    "8. Finish / PR" -> "DONE";
 }
 ```
 
@@ -86,9 +92,15 @@ These keep the planning and execution layers from stepping on each other:
 
 This skill was written against a Spec-Kit-style spec layer (`/speckit-specify`, `/speckit-plan`, `/speckit-tasks`, hooks). Adapt to the profile's **Spec / planning layer**:
 
-- **Spec-Kit present** → use `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-tasks` and their commit hooks as written below.
-- **Plain-markdown specs** → the spec/plan/tasks "subagents" just write the markdown artifacts (spec → plan → task checklist) into the profile's spec location; commit after each.
-- **No spec tooling configured ("none")** → **default to plain-markdown specs anyway.** Write a lightweight `spec.md` (overview, user stories, functional requirements, acceptance criteria) into `docs/specs/<NNN>-<slug>/` (or the repo's conventional location), then a short `plan.md` and `tasks.md`. Spec-Kit's clarify/analyze tooling is skipped, but the artifacts are still produced — so every non-trivial run leaves a written spec. Only the lightest scaling tier (< 30 min / < 3 files) may skip artifact generation, and even then the brainstorm/grill output must be captured as a short spec note in the PR description. Worktree + implement + review + finish still apply.
+- **Spec-Kit present** → use `/speckit-specify` (step 1), `/speckit-clarify` (step 2), `/speckit-checklist` (step 2b, optional), `/speckit-plan` (step 3), `/speckit-tasks` (step 4), and `/speckit-analyze` (step 4b) and their commit hooks as written below. These map 1:1 onto the steps; prefer the real Spec-Kit command over a hand-rolled subagent whenever it is installed.
+- **Plain-markdown specs** → the spec/plan/tasks "subagents" just write the markdown artifacts (spec → plan → task checklist) into the profile's spec location; commit after each. The clarify (step 2), checklist (step 2b), and analyze (step 4b) gates still run, but as hand-rolled subagents (the fallbacks described in those steps) rather than Spec-Kit commands.
+- **No spec tooling configured ("none")** → **default to plain-markdown specs anyway.** Write a lightweight `spec.md` (overview, user stories, functional requirements, acceptance criteria) into `docs/specs/<NNN>-<slug>/` (or the repo's conventional location), then a short `plan.md` and `tasks.md`. Spec-Kit's clarify/checklist/analyze tooling is skipped (you may still run the lightweight hand-rolled analyze gate at step 4b), but the artifacts are still produced — so every non-trivial run leaves a written spec. Only the lightest scaling tier (< 30 min / < 3 files) may skip artifact generation, and even then the brainstorm/grill output must be captured as a short spec note in the PR description. Worktree + implement + review + finish still apply.
+
+**Constitution / principles (Spec-Kit's `constitution`).** Spec-Kit's `clarify`, `plan`, and `analyze` commands all read `/memory/constitution.md` (the project's non-negotiable principles) when it exists, and treat a constitution violation as CRITICAL. In dev-workflows that role is already played by the stack profile's **Conventions** and **frozen patterns** (`.sdd/stack.md`) — they ARE your constitution. So: if the project uses Spec-Kit's `analyze`/`clarify`, keep a `constitution.md` in sync with the stack profile's frozen patterns (or generate it from them) so the gate has principles to check; if there is no constitution, that's fine — the gate's constitution checks become no-ops and the stack profile still flows in as `[PROJECT CONTEXT]`. Do not maintain two divergent rule sources.
+
+**Do NOT adopt these Spec-Kit commands into this loop:**
+- **`speckit-implement`** — it is a *competing executor*. This skill's step 6 uses the Superpowers subagent-driven TDD loop instead (see Critical Handoff Rule 3). Running `speckit-implement` would fork the execution layer and bypass the worktree dispatch contract + per-task reviews. Use the standalone `/implement` skill only outside this pipeline.
+- **`speckit-taskstoissues`** — it exports `tasks.md` to GitHub issues for *distributed/human* tracking. That's an alternative to the in-session worktree+subagent loop, not a step within it. Offer it as a standalone path (`/tasks-to-issues`) for teams that want issue tracking; never wire it into the automated run.
 
 ## Step-by-Step Instructions
 
@@ -140,9 +152,15 @@ Wait for result. On BLOCKED: surface the blocker to the user and stop.
 
 ---
 
-### 2. Clarify — subagent
+### 2. Clarify
 
-Resolve underspecified areas before planning. If the spec subagent reported `OPEN_CLARIFICATIONS: 0` and the feature is straightforward, you may skip — otherwise dispatch a **clarify subagent**:
+Resolve underspecified areas before planning. If the spec subagent reported `OPEN_CLARIFICATIONS: 0` and the feature is straightforward, you may skip.
+
+**If Spec-Kit is the spec layer → invoke `/speckit-clarify` instead of hand-rolling.** Run `EXECUTE_SKILL: speckit-clarify` (no arguments needed — it operates on the active feature's `spec.md`). It performs a taxonomy-driven coverage scan, asks up to 5 targeted questions one at a time (each leading with a recommended answer), encodes every answer back into `spec.md` under a dated `## Clarifications` log, and re-validates `checklists/requirements.md` if step 2b produced one. This is strictly better than the hand-rolled prompt below — prefer it whenever Spec-Kit is installed. (This is also what the *Spec layer adaptation* section above mandates; the two now agree.)
+
+> **Non-interactive contexts** (`/loop`, autonomous, no live user): skip `/speckit-clarify` — it is interactive. Leave the `NEEDS_CLARIFICATION` markers in place for a human pass, or auto-resolve only markers with an obvious project-convention default.
+
+**Otherwise (plain-markdown / "none" spec layer)** dispatch a **clarify subagent**:
 
 ```
 You are clarifying an underspecified feature spec.
@@ -167,6 +185,19 @@ Return:
 ```
 
 If `REMAINING` is non-empty with a genuine product decision, surface those questions to the user and pause before planning. Otherwise continue.
+
+---
+
+### 2b. Checklist — requirements-quality gate (optional, T3 / high-risk)
+
+**Conditional gate.** Run this only for the **full-pipeline tier** *and* when the feature is **high-risk** (auth, payments, data-shape/migration, security- or compliance-sensitive UX). Skip it for everything else — for ordinary features the grill + clarify gates already cover requirement quality, and this is extra ceremony.
+
+A checklist here is **"unit tests for the requirements"** — it validates that the *requirements themselves* are complete, clear, consistent, and measurable (NOT that the code works). Example items: *"Is 'fast load' quantified with a specific threshold? [Clarity]"*, *"Are auth requirements defined for every protected resource? [Coverage]"*.
+
+- **Spec-Kit present** → `EXECUTE_SKILL: speckit-checklist <focus>` where `<focus>` is the risk dimension (e.g. `security`, `ux`, `api`). It writes `FEATURE_DIRECTORY/checklists/<domain>.md`. The clarify gate (step 2) and the analyze gate (step 4b) both read these checklists, so generating one here makes those gates stricter.
+- **Plain-markdown / none** → optionally write a short `checklists/<domain>.md` by hand with 5–15 requirement-quality questions for the chosen dimension. If you skip it, note that you did.
+
+This gate is **soft**: its output informs the analyze gate (4b) and the reviewers; it does not by itself block. Do not turn checklist items into implementation test cases — they test the English, not the build.
 
 ---
 
@@ -228,6 +259,43 @@ Return:
 ```
 
 On BLOCKED: surface to user and stop. If `TEST_TASK_COUNT` is 0, re-dispatch with instruction to add test tasks.
+
+---
+
+### 4b. Analyze — cross-artifact consistency gate (read-only)
+
+Before any code is written, verify that `spec.md`, `plan.md`, and `tasks.md` actually agree. This is the cheapest place to catch drift: a requirement with no task, a task with no source requirement, terminology that shifted between artifacts, or a plan decision the spec never asked for. Catching it here costs one read-only pass; catching it mid-implementation costs wasted subagent turns and rework.
+
+**This gate is READ-ONLY — it never edits files.** It produces a findings report; you act on the findings.
+
+- **Spec-Kit present** → `EXECUTE_SKILL: speckit-analyze`. It loads spec/plan/tasks (and the constitution if present), builds a requirements↔tasks coverage map, and emits a findings table with severities (CRITICAL/HIGH/MEDIUM/LOW) plus a coverage %.
+- **Plain-markdown / none** → dispatch a lightweight **analyze subagent** (read-only):
+
+```
+You are doing a READ-ONLY cross-artifact consistency check. Do NOT edit any file.
+
+Feature directory: FEATURE_DIRECTORY
+Read: spec.md, plan.md, tasks.md (and any checklists/ from step 2b).
+
+Report findings in a table (ID | Severity | Location | Issue | Recommendation):
+1. Coverage gaps — requirements/acceptance criteria with NO covering task; tasks with NO source requirement.
+2. Inconsistency — terminology drift; entities in plan absent from spec (or vice versa); task ordering that contradicts dependencies.
+3. Ambiguity — vague unmeasurable requirements ("fast", "robust") that survived clarify; unresolved TODO/placeholder markers.
+4. Over-build — plan/tasks introducing scope the spec never requested.
+
+Severity: CRITICAL = zero-coverage of baseline functionality or a contradiction that will misdirect the build; HIGH = conflicting/ambiguous requirement; MEDIUM = terminology drift / missing non-functional coverage; LOW = wording.
+
+Return:
+- FINDINGS: the table (or "none")
+- COVERAGE_PCT: % of requirements with >=1 task
+- CRITICAL_COUNT: integer
+- STATUS: CLEAN (no CRITICAL/HIGH) or NEEDS_FIX
+```
+
+**Acting on the result:**
+- **CRITICAL or HIGH findings** → fix the offending artifact **before** the worktree. A coverage gap or contradiction means re-running the relevant earlier step: spec gap → amend `spec.md` (+ re-clarify); plan/task gap → re-dispatch the plan or tasks subagent scoped to the gap. Re-run analyze until `STATUS: CLEAN`.
+- **Only MEDIUM/LOW** → you may proceed; note them so the per-task reviewers (step 6) and the final review (step 7) watch for them.
+- **Non-interactive contexts** still run this gate (it's not interactive) — but on CRITICAL findings with no live user, stop and surface rather than guessing a fix.
 
 ---
 
@@ -452,9 +520,11 @@ This pipeline runs multiple subagents to protect the main context window:
 | Brainstorm | main session | Interactive with the user |
 | Grill | main session | Interactive design stress-test; needs a live user |
 | Spec | subagent | Reads many template files; isolate |
-| Clarify | subagent | Reads spec + schemas |
+| Clarify | subagent (or `/speckit-clarify`) | Reads spec + schemas |
+| Checklist (2b, optional) | subagent (or `/speckit-checklist`) | Requirements-quality items; high-risk only |
 | Plan | subagent | Reads spec + templates |
 | Tasks | subagent | Reads plan + spec; outputs large file |
+| Analyze (4b) | subagent (or `/speckit-analyze`) | Read-only cross-artifact consistency before code |
 | Worktree | main session | Workspace setup; orchestrator owns the path |
 | Each impl task | subagent | Fresh context per task — no drift |
 | Reviews | subagent | Independent read of diff only |
@@ -477,6 +547,8 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 | Clarify leaves genuine product decision | Surface to user, pause before planning |
 | Plan subagent BLOCKED | Surface to user, stop pipeline |
 | Tasks has 0 test tasks | Re-dispatch tasks with explicit TDD instruction |
+| Analyze gate finds CRITICAL/HIGH (coverage gap, contradiction) | Fix the offending artifact BEFORE the worktree (amend spec + re-clarify, or re-dispatch plan/tasks scoped to the gap); re-run analyze until CLEAN (step 4b) |
+| Analyze gate finds only MEDIUM/LOW | Proceed; flag them for the per-task and final reviewers |
 | Worktree setup fails | Fall back to building on the feature branch directly; note it to the user |
 | Subagent worked in the repo root (reviewer reports "no changes"; implementer's commits aren't on the branch; planning branch dirty/worktree clean) | The dispatch omitted or the subagent ignored the worktree contract. Re-dispatch with the absolute `WORKTREE_PATH` block at the TOP of the prompt and the `cd … && git rev-parse --show-toplevel` self-check as the first action (see §5 dispatch contract) |
 | Implementer tries to re-plan | Re-dispatch with the "task list is the contract — execute, don't re-plan" rule restated |
@@ -492,6 +564,9 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 - [ ] Stack profile loaded; stack specifics came from it (not hardcoded)
 - [ ] Scaling tier assessed — full pipeline was the right ceremony (or lighter path taken)
 - [ ] A written `spec.md` artifact exists for this work (any non-trivial run; the lightest tier instead captured a spec note in the PR description)
+- [ ] Clarify gate ran (`/speckit-clarify` when Spec-Kit present, else the hand-rolled subagent) — or was deliberately skipped (straightforward / non-interactive)
+- [ ] Checklist gate (2b) ran for high-risk T3 features, or was consciously skipped
+- [ ] Analyze gate (4b) ran before the worktree and returned CLEAN (no unresolved CRITICAL/HIGH cross-artifact findings)
 - [ ] All tasks in tasks.md marked `[X]`
 - [ ] Verify commands pass cleanly
 - [ ] Final code review approved
