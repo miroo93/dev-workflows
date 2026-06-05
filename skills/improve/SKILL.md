@@ -18,7 +18,7 @@ This skill reuses the same building blocks as `/feature`:
 
 ## Stack profile (READ FIRST)
 
-Load the project's **stack profile** before anything: `.sdd/stack.md` (preferred) or `sdd-stack.md` at repo root. If neither exists, prompt the user to create one from the plugin's `templates/sdd-stack.template.md`, or auto-detect conservative defaults. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary from the profile (stack, binding files, conventions, frozen patterns, verify commands). Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands*. Never hardcode a framework or build command.
+Load the project's **stack profile** before anything: `docs/stack.md` (preferred) or `sdd-stack.md` at repo root. If neither exists, prompt the user to create one from the plugin's `templates/sdd-stack.template.md`, or auto-detect conservative defaults. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary from the profile (stack, binding files, conventions, frozen patterns, verify commands). Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands*. Never hardcode a framework or build command.
 
 See the profile's **Spec / planning layer** — adapt spec/plan/tasks steps to whatever spec tooling the project uses (Spec-Kit, plain markdown, or none). With no spec tooling configured, **default to plain-markdown specs**: for T2/T3 create a minimal `spec.md` if one doesn't exist, then amend it (create-then-amend). Don't require Spec-Kit.
 
@@ -288,7 +288,7 @@ Report the PR URL.
 
 | Situation | Action |
 |-----------|--------|
-| No stack profile found | Prompt user to create `.sdd/stack.md`, or auto-detect defaults |
+| No stack profile found | Prompt user to create `docs/stack.md`, or auto-detect defaults |
 | Change description vague | `superpowers:brainstorming` before amending the spec |
 | Change design decisions unresolved (T2/T3) | Run `grill-me` (step 1b) before amending |
 | Grill gate but no live user | Skip grill; record open decisions as NEEDS_CLARIFICATION |

@@ -15,7 +15,7 @@ Generate a checklist that validates the **requirements themselves** — are they
 
 > **`/feature` runs this as an optional gate** (§2b) for high-risk T3 features. Use `/checklist` standalone to add a quality dimension to an existing spec.
 
-Defers to the project's **spec layer** (`.sdd/stack.md` → *Spec / planning layer*):
+Defers to the project's **spec layer** (`docs/stack.md` → *Spec / planning layer*):
 
 - **GitHub Spec-Kit installed** → `EXECUTE_SKILL: speckit-checklist $ARGUMENTS`. It writes `FEATURE_DIR/checklists/<domain>.md` (CHK### items). Spec-Kit's `/speckit-clarify` re-validates these items, and `/speckit-analyze` reads them — so generating one makes those gates stricter.
 - **Plain-markdown specs** → write a short `checklists/<domain>.md` next to the feature's `spec.md` with 5–15 requirement-quality questions for the chosen dimension, each tagged `[Completeness/Clarity/Consistency/Measurability/Coverage]` and referencing a spec section or marked `[Gap]`. Do not write implementation test cases.

@@ -9,7 +9,7 @@ user-invocable: true
 
 Create or amend the spec for a feature, as the first planning artifact before `/feature` or `/improve` build it.
 
-This skill defers to the project's **spec layer** (see `.sdd/stack.md` → *Spec / planning layer*):
+This skill defers to the project's **spec layer** (see `docs/stack.md` → *Spec / planning layer*):
 
 - **GitHub Spec-Kit installed** → invoke `speckit-specify` with the same `$ARGUMENTS`:
   `EXECUTE_SKILL: speckit-specify $ARGUMENTS`

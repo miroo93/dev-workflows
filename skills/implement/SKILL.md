@@ -11,7 +11,7 @@ Execute the task checklist for the current feature.
 
 > **Note:** `/feature` and `/improve` run their own Superpowers subagent-driven TDD loop and do **not** call this skill. Use `/implement` only when you want to run a pre-existing `tasks.md` standalone (outside those pipelines).
 
-Defers to the project's **spec layer** (`.sdd/stack.md` → *Spec / planning layer*):
+Defers to the project's **spec layer** (`docs/stack.md` → *Spec / planning layer*):
 
 - **GitHub Spec-Kit installed** → `EXECUTE_SKILL: speckit-implement $ARGUMENTS`
 - **Plain-markdown specs** → execute the tasks in `tasks.md` in order with TDD discipline (red → green → refactor per task), running the profile's verify commands and committing after each task. Prefer `superpowers:subagent-driven-development` for a fresh-context-per-task loop.

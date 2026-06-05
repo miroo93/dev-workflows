@@ -4,7 +4,7 @@
 #              wait-ready | bypass-snippet | auth-route-snippet      (preview target)
 #
 # All stack specifics come from environment variables (the calling skill exports
-# them from the project's .sdd/stack.md "E2E smoke gate" block). Secrets
+# them from the project's docs/stack.md "E2E smoke gate" block). Secrets
 # (E2E_PASSWORD) reach only curl. The minted token → .e2e-smoke/.token (gitignored),
 # never echoed.
 #

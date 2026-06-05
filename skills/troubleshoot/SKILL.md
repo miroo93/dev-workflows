@@ -20,7 +20,7 @@ End-to-end bug workflow for issues **you found while manually testing the app** 
 
 ## Stack profile (READ FIRST)
 
-Load the project's **stack profile**: `.sdd/stack.md` (preferred) or `sdd-stack.md` at repo root. If neither exists, prompt the user to create one from the plugin's `templates/sdd-stack.template.md`, or auto-detect conservative defaults. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary from the profile. Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands*. The profile's **Backend-log tool** and **Spec location glob** drive the optional branches below.
+Load the project's **stack profile**: `docs/stack.md` (preferred) or `sdd-stack.md` at repo root. If neither exists, prompt the user to create one from the plugin's `templates/sdd-stack.template.md`, or auto-detect conservative defaults. Everywhere this skill says **[PROJECT CONTEXT]**, substitute a compact summary from the profile. Everywhere it says **[VERIFY]**, substitute the profile's *Verify commands*. The profile's **Backend-log tool** and **Spec location glob** drive the optional branches below.
 
 ## Input
 
@@ -181,7 +181,7 @@ Report the PR URL to the user.
 
 | Situation | Action |
 |-----------|--------|
-| No stack profile found | Prompt user to create `.sdd/stack.md`, or auto-detect defaults |
+| No stack profile found | Prompt user to create `docs/stack.md`, or auto-detect defaults |
 | Can't reproduce | Stop. Ask user for exact steps / screenshot / failing value — never guess a fix |
 | Multiple feature matches | List candidates, ask which feature |
 | No spec for the area | Proceed without the oracle; note diagnosis is unverified against a spec |

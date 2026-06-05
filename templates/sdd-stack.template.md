@@ -2,7 +2,7 @@
 
 > **What this is:** the per-project configuration that the `dev-workflows` skills
 > (`feature`, `improve`, `troubleshoot`, `e2e-smoke`) read so they stay stack-agnostic.
-> Copy this file to **`.sdd/stack.md`** in your project root and fill every section in.
+> Copy this file to **`docs/stack.md`** in your project root and fill every section in.
 > The skills look for it there first, then at `sdd-stack.md` in the repo root.
 >
 > Anything left as a `<…>` placeholder means the skills will ask you or fall back to a
