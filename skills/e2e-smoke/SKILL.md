@@ -20,9 +20,12 @@ the calling skill skips the e2e gate entirely.
 - `SMOKE_FOCUS` — short description of what changed (routes/interactions to exercise)
 
 ## Config (from the stack profile's E2E smoke gate block)
-- `app_url`, `dev_command`, `auth_mode` (`token-injection` | `form-login` | `none`)
+- `target` (`local` — default | `preview`) — `local` serves a dev server; `preview` runs against a deployed Vercel preview URL (no local server). See "Procedure (preview target)".
+- `app_url`, `dev_command`, `auth_mode` (`token-injection` | `form-login` | `cookie-route` | `none`)
 - token-injection: `login_endpoint`, `token_response_path`, `storage_keys`, `request_fields`, `env_vars`
 - form-login: `login_path`, `email_selector`, `password_selector`, `submit_selector`, `env_vars`
+- cookie-route (preview-friendly, SSR-cookie auth): `auth_route` (default `/api/test-auth`), `auth_route_secret_env` — a preview-only route that mints a session and Set-Cookies it server-side
+- preview target: `vercel_project`, `preview_url_source` (`github-deployment` | `vercel-cli` | `env`), `protection_bypass_env`, `ready_timeout_s`
 - `authed_assert_selector` — element that only renders when authenticated
 - `baseline_console_ignore` — console-error substrings to ignore as baseline noise
 
@@ -30,6 +33,7 @@ the calling skill skips the e2e gate entirely.
 - The password lives only in gitignored `.env` and is read **only inside `e2e-smoke.sh`** (token-injection: it reaches `curl`; form-login: it is baked into the gitignored `.e2e-smoke/login.js` snippet by the script). **Never pass the password as an argument to a Playwright MCP tool** (e.g. `browser_fill_form`, `browser_type`) — the MCP echoes tool arguments into the transcript. In form-login mode you fill the password via the script-generated `login.js` snippet, run **by filename**, so the literal never crosses the MCP boundary. Never print the password.
 - The minted token lives only in gitignored `.e2e-smoke/.token`, is injected via the gitignored `.e2e-smoke/inject.js` snippet, and is scrubbed in teardown.
 - Do not `cat`/echo the token, the inject snippet, or the login snippet. Run snippets by **filename** only.
+- **Preview secrets** (`E2E_PROTECTION_BYPASS`, `E2E_AUTH_ROUTE_SECRET`) live only in gitignored `.env`. The bypass secret reaches `curl` via a gitignored config file (`header = …`), never argv; both are baked into the gitignored `bypass.js` / `auth-route.js` snippets, run **by filename** only. Never print them, and never pass them as Playwright MCP tool arguments.
 - Add `.e2e-smoke/` and `.env` to `.gitignore` if not already present.
 
 ## Step 0 — Load config from the stack profile (REQUIRED FIRST)
@@ -96,6 +100,30 @@ export E2E_SUBMIT_SELECTOR="<submit selector>"       # default button[type=submi
 
 ## Procedure (auth_mode: none)
 Public app — skip login/inject; serve, drive the checklist on the changed routes, verdict, teardown.
+
+## Procedure (preview target)
+When the profile sets `target: preview`, test the **deployed Vercel preview** for the PR's HEAD commit instead of a local dev server. There is **no `serve`/`teardown` of a dev server** — `app_url` becomes the resolved preview URL, and Deployment Protection is bypassed with a cookie before any auth runs. Use this only on a branch that has an open PR (so a preview deployment exists).
+
+**0. Resolve the preview URL** (per `preview_url_source`) and export it as `E2E_APP_URL`:
+   - `github-deployment` (default, best for web sessions): read the PR's deployments/commit-statuses via the GitHub MCP tools, find the **Preview** environment deployment for the current HEAD SHA, take its `target_url`. If none yet, the deploy hasn't started → `BLOCKED` reason "no preview deployment for HEAD".
+   - `vercel-cli`: `vercel ls <vercel_project> --environment=preview --token=$VERCEL_TOKEN` (or `vercel inspect`) filtered to the HEAD SHA.
+   - `env`: caller already set `E2E_PREVIEW_URL`/`E2E_APP_URL`.
+   Then export the target config (the bypass secret is sourced from gitignored `.env`):
+   ```bash
+   export E2E_TARGET="preview"
+   export E2E_APP_URL="<resolved preview url>"
+   export E2E_READY_TIMEOUT="<ready_timeout_s, default 600>"
+   # E2E_PROTECTION_BYPASS (Vercel Protection-Bypass-for-Automation secret) from gitignored .env
+   ```
+1. **Wait for READY.** `bash ${CLAUDE_PLUGIN_ROOT}/skills/e2e-smoke/e2e-smoke.sh wait-ready`. Polls the preview (sending the bypass header from `.env`) until it serves 2xx/3xx. `BLOCKED` if it never becomes ready in `ready_timeout_s`, or stays 401/403 (bad/missing bypass secret).
+2. **Plant the bypass cookie.** `bash …/e2e-smoke.sh bypass-snippet`, then call Playwright MCP `browser_run_code_unsafe` with `filename: .e2e-smoke/bypass.js`. This navigates once with the bypass query param (`x-vercel-set-bypass-cookie=true`) so the cookie covers the whole browser context, then returns to the clean URL. (If `auth_mode: none`, skip step 3.)
+3. **Authenticate** against the preview origin:
+   - **cookie-route** (recommended for `@supabase/ssr`): `bash …/e2e-smoke.sh auth-route-snippet`, then `browser_run_code_unsafe` with `filename: .e2e-smoke/auth-route.js`. It sends the route secret as a header (baked into the snippet file, run by filename — never a tool arg) to the preview-only `auth_route`, which Set-Cookies a Supabase session, then navigates to the app. **Assert the authenticated shell** (URL not a login route AND `authed_assert_selector` present); else `BLOCKED` reason "test-auth route did not authenticate".
+   - **token-injection / form-login**: run `inject-snippet` / `login-snippet` exactly as the local procedures — the only difference is `E2E_APP_URL` is the preview URL and the bypass cookie is already planted. (Note: localStorage token-injection does **not** satisfy `@supabase/ssr` cookie sessions — use cookie-route for SSR apps.)
+4. **Drive the checklist → verdict** exactly as token-injection steps 5–6.
+5. **Teardown.** `browser_close`, then `bash …/e2e-smoke.sh teardown` (no dev server was started; this just scrubs the snippets + curl config). Deployment Protection's bypass cookie lives only in the closed browser context.
+
+> **Honest scope:** preview testing exercises the real deployed artifact (Vercel runtime, RSC/middleware, real backend) but does **not** solve auth on its own — an SMS/phone-OTP app still needs a deterministic test-auth path (the preview-only `auth_route` above, or a fixed-OTP test user). A `BLOCKED` here is never a `PASS` (see soft-gate contract).
 
 ## Return (to the caller)
 One block:
