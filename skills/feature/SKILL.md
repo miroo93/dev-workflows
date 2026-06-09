@@ -385,6 +385,8 @@ Use **`superpowers:subagent-driven-development`** (one fresh subagent per task, 
 
 > **Handoff rule (don't re-plan):** `tasks.md` is the contract. Implementer subagents execute the listed tasks — they do not re-plan or expand scope. Do not invoke a separate spec-tooling "implement" command here; this loop replaces it.
 
+> **UI rule (use the design agents for UI tasks).** When a task builds or substantially changes a **user-facing surface** — a screen, component, page, or layout (not pure logic, data, server actions, or tests) — the implementer subagent MUST invoke the **`frontend-design`** skill and apply a UX-design review of the flow, rather than emitting first-draft markup. This is the parallel design-agent approach that yields distinctive, production-grade UI instead of generic AI aesthetics. It is **bounded by the frozen design system**: preserve the project's existing theme tokens / palette per `[PROJECT CONTEXT]` (agents enhance layout and UX, they do **not** redesign the palette), stay mobile-first, and keep graceful empty/error states. Pure non-UI tasks skip this and go straight to the normal TDD implementer — the per-task dispatch below carries this instruction only for UI tasks.
+
 #### 6a. Parse the task list
 
 Read `TASKS_FILE`. Extract all tasks into a structured list and create a `TodoWrite` with every task.
@@ -416,6 +418,7 @@ TASK_TYPE: [test | implementation | setup]
 
 RULES:
 - The task list is the contract. Implement EXACTLY this task — do NOT re-plan, expand scope, or pull in work from other tasks.
+- If this task builds a UI surface (screen/component/page/layout), invoke the `frontend-design` skill and apply a UX-design review BEFORE writing markup; PRESERVE the project's frozen theme tokens/palette ([PROJECT CONTEXT]) — enhance layout/UX, do not redesign the palette. Pure logic/data/server/test tasks skip this.
 - If TASK_TYPE is "test": write the test first, run it and confirm it FAILS (red), then stop — do not implement
 - If TASK_TYPE is "implementation": run existing tests first to confirm they're red, implement the MINIMAL code until green, then run [VERIFY]
 - If TASK_TYPE is "setup": complete the setup task, verify with [VERIFY]
@@ -540,7 +543,7 @@ If READY_FOR_PR is no: fix blockers, then re-review.
    - `FEATURE_DIRECTORY` = the feature dir
    - `WORKTREE_PATH` = the worktree from step 5
    - `SMOKE_FOCUS` = the user stories / routes this feature added
-   Apply its soft-gate contract: `PASS` → proceed to §8. `FAIL` → fix the failing interaction (back to step 6), then re-run. `BLOCKED` → surface the reason and ask the user whether to proceed to PR without the e2e check. Never silently skip. (If the gate is disabled in the profile, skip this step.)
+   Apply its soft-gate contract: `PASS` → proceed to §8. `FAIL` → fix the failing interaction (back to step 6), then re-run. `BLOCKED` → surface the reason and ask the user whether to proceed to PR without the e2e check. Never silently skip. (If the gate is disabled in the profile, skip this step.) **Keep the evidence it returns** (`EVIDENCE` = per-step screenshots; `VIDEO` = the Playwright video/report link when the run produced one) and carry it into the PR body in §8.
 
 ---
 
@@ -552,6 +555,7 @@ The PR body should include:
 - Summary: what was built (from spec.md overview)
 - Test plan: checklist of smoke-test steps for the user to verify in the UI
 - Link to spec: the feature's `spec.md`
+- **Visual evidence (whenever the e2e gate ran):** embed the `e2e-smoke` per-step **screenshots** (images/thumbnails, not just paths) and include the **Playwright video/report link** — for CI runs, the uploaded Playwright report/video artifact URL from the `e2e` job; for a local run, the preserved capture under `e2e-evidence/`. A UI feature's PR should *show* the working flow, not just describe it.
 
 ---
 

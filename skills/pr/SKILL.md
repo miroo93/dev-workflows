@@ -100,6 +100,9 @@ The branch's PR is done; pushing more commits to it goes nowhere. Put the follow
 - `/pr new` ⇒ force the **NEW PR** path even if an open PR exists (you deliberately want to split this work out).
 - A free-text arg ⇒ use it as the PR title/summary when creating.
 
+### PR body — carry the test evidence
+When this branch's work included a UI change verified by the e2e gate (`/feature` §7 / `/improve` §6 invoked `e2e-smoke`), the PR description must **include that evidence**: the per-step **screenshots** (embedded as images/thumbnails, not bare paths) and the **Playwright video/report link** (the CI artifact URL from the `e2e` job, or a preserved local capture under `e2e-evidence/`). When updating an existing PR and newer evidence exists, **refresh it**. A UI PR should *show* the working flow. (Pure non-UI changes: a normal summary + test plan is enough.)
+
 ## Quick reference
 
 | Live PR status | Action | Push |
