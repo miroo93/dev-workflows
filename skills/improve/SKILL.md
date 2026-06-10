@@ -234,6 +234,8 @@ Invoke **`superpowers:using-git-worktrees`** to set up an isolated workspace on 
 
 **T3 (task loop):** use **`superpowers:subagent-driven-development`** — one fresh subagent per task (the task list is the contract; implementers execute, they do **not** re-plan), with TDD inside each task. Do **not** also invoke a separate spec-tooling "implement" command.
 
+> **UI rule (use the design agents for UI work).** When the change builds or substantially restyles a **user-facing surface** (screen/component/page/layout — not pure logic, data, server, or tests), invoke the **`frontend-design`** skill and apply a UX-design review instead of hand-writing first-draft markup — the same design-agent approach `/feature` §6 uses. Stay **inside the frozen design system**: preserve the project's theme tokens/palette ([PROJECT CONTEXT]); enhance layout/UX, don't redesign the palette. Non-UI changes skip it.
+
 After each slice/task, run the two reviewers from `/feature` (reuse those exact prompts):
 
 - **Spec-compliance review** — does the diff implement what the amended spec requires for this change, nothing missing, nothing over-built? Loop until compliant.
@@ -263,6 +265,7 @@ Invoke **`superpowers:finishing-a-development-branch`**. PR body:
 - **Tests:** new tests added + confirmation the existing suite still passes.
 - **Verification:** verify commands clean.
 - **Smoke-test checklist:** steps for the user to verify the change in the UI.
+- **Visual evidence (whenever the e2e gate ran):** embed the `e2e-smoke` per-step **screenshots** + the **Playwright video/report link** (the CI artifact URL from the `e2e` job, or a preserved local capture under `e2e-evidence/`) — show the changed UI working, don't just describe it.
 
 Report the PR URL.
 

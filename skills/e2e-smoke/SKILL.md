@@ -77,10 +77,10 @@ export E2E_STORAGE_KEYS="<storage_keys, comma-separated>"
 3. **Inject snippet.** Run `bash ${CLAUDE_PLUGIN_ROOT}/skills/e2e-smoke/e2e-smoke.sh inject-snippet`.
 4. **Boot authenticated app.** Call Playwright MCP `browser_run_code_unsafe` with `filename: .e2e-smoke/inject.js`. **Do NOT `browser_navigate` to the app first** — the snippet's `addInitScript` must set the token *before* the page loads, and the snippet does its own `page.goto`. (The snippet's `filename` is resolved relative to the repo root, where the script wrote it; if the Playwright MCP server reports file-not-found, pass the absolute path `$WORKTREE_PATH/.e2e-smoke/inject.js`.) Then `browser_snapshot`. **Assert the authenticated shell**: the page URL is still the app URL (NOT redirected to a login route) AND the profile's `authed_assert_selector` is present. If it redirected to login or shows the auth-required state → return `BLOCKED` reason "token rejected / not authenticated" (env/credential issue, not a code FAIL).
 5. **Drive the checklist.** Derive 3–6 concrete steps from `FEATURE_DIRECTORY`'s acceptance criteria + `SMOKE_FOCUS`: navigate to each changed route, perform the key interaction, assert the observable outcome via `browser_snapshot`. Throughout, collect `browser_console_messages` (level error) and watch for failed network requests on the exercised paths. ("NEW" error = any error-level console message whose text does NOT match a substring in `baseline_console_ignore`; there is no separate pre-change baseline capture — the ignore-list IS the baseline.)
-6. **Evidence + verdict.**
-   - `PASS` — every checklist step's expected outcome observed AND no NEW console error on the change's path (ignore substrings in `baseline_console_ignore`).
-   - `FAIL` — a step's expected outcome did not appear, OR a non-baseline console/network error fired on the change's path. Capture a `browser_take_screenshot` (to `.e2e-smoke/`, which is scrubbed) and include the failing step + the error text in the return.
-7. **Teardown.** `browser_close`, then `bash ${CLAUDE_PLUGIN_ROOT}/skills/e2e-smoke/e2e-smoke.sh teardown` (kills only a dev server this run started; scrubs token + snippet).
+6. **Evidence + verdict.** Capture a `browser_take_screenshot` at **every** checklist step (PASS *and* FAIL), writing each to a **preserved** evidence dir — `e2e-evidence/<branch-or-feature>/NN-<step>.png` at the repo root, **NOT** `.e2e-smoke/` (teardown scrubs that). These per-step screenshots are the PR's visual evidence. If the Playwright MCP browser context is recording **video** (configure it to when available), note the produced video file path too. Return every evidence path in `EVIDENCE` / `VIDEO` (see Return).
+   - `PASS` — every checklist step's expected outcome observed AND no NEW console error on the change's path (ignore substrings in `baseline_console_ignore`). Evidence = the per-step screenshots (+ video if recorded).
+   - `FAIL` — a step's expected outcome did not appear, OR a non-baseline console/network error fired on the change's path. Evidence = the screenshots up to and including the failing step + the error text.
+7. **Teardown.** `browser_close`, then `bash ${CLAUDE_PLUGIN_ROOT}/skills/e2e-smoke/e2e-smoke.sh teardown` (kills only a dev server this run started; scrubs token + snippet). **The `e2e-evidence/` dir is NOT scrubbed** — its screenshots/video are the PR evidence; leave them for the caller. (Add `e2e-evidence/` to `.gitignore` so raw captures aren't committed — they reach the PR via upload, see "PR evidence" below.)
 
 ## Procedure (form-login mode)
 The script's `login`/`inject-snippet` are token-injection-specific. For form-login, export the form-login config and use `serve`/`login-snippet`/`teardown`:
@@ -131,9 +131,11 @@ One block:
 E2E_VERDICT: PASS | FAIL | BLOCKED
 SMOKE_STEPS: <the checklist you ran>
 FAILED_STEP: <only if FAIL>
-EVIDENCE: <console/network error text; screenshot path if FAIL>
+EVIDENCE: <per-step screenshot paths under e2e-evidence/ (PASS and FAIL); plus console/network error text on FAIL>
+VIDEO: <Playwright video/trace path if recorded locally, or the CI Playwright report/video artifact URL — the "video link" for the PR; "none" if unavailable>
 BLOCKED_REASON: <only if BLOCKED>
 ```
+The caller (`/feature` §8, `/improve` §7, `/pr`) puts `EVIDENCE` (screenshots) and `VIDEO` (link) into the PR description.
 
 ## Soft-gate contract (how callers MUST treat the verdict)
 - `PASS` → proceed.
@@ -141,6 +143,13 @@ BLOCKED_REASON: <only if BLOCKED>
 - `BLOCKED` → surface BLOCKED_REASON; ask the user whether to proceed without the e2e check. NEVER silently skip.
 
 **BLOCKED is not a PASS.** It means the check did not run, so you have no signal — treat it as "unverified," never as "verified enough." You may not open the PR or proceed on a BLOCKED (or FAIL) verdict without an **explicit user override**. Noting the reason in the PR description, or judging the cause to be "just infra / not my code," does **not** substitute for asking — the *ask* is the gate, not the mention. "Surface" means surface **and** wait for the user's decision.
+
+## PR evidence (screenshots + video link)
+
+The caller embeds this run's evidence in the PR description (`/feature` §8 / `/improve` §7 / `/pr`):
+
+- **Screenshots:** the per-step images under `e2e-evidence/` — **upload** them to the PR (drag-in or attach via the PR tooling) and embed the thumbnails. Don't just list filesystem paths a reviewer can't open.
+- **Video link:** an ad-hoc MCP smoke may not record video; the durable **video** comes from the project's **committed Playwright suite in CI**. Ensure the Playwright config records video + trace (`use: { video: 'retain-on-failure', trace: 'on-first-retry' }`, or `'on'` to always record) and the CI `e2e` job uploads `playwright-report/` + `test-results/` as a GitHub Actions **artifact** (`actions/upload-artifact`). The artifact URL (or a per-test video inside it) is the **video link** the PR points to. If neither a local video nor a CI artifact exists, report `VIDEO: none` rather than omitting it silently.
 
 ## Notes
 - Only Chromium via Playwright MCP. No committed Playwright specs (ad-hoc by design).
