@@ -17,9 +17,17 @@ at runtime instead of hardcoding a framework or build command.
 | `/spec` `/plan` `/tasks` `/implement` | Thin entry points that defer to your spec layer (GitHub Spec-Kit if installed, plain markdown, or none). |
 | `/analyze` `/checklist` `/tasks-to-issues` | More spec-layer entry points. `/analyze` = read-only cross-artifact consistency check (spec vs plan vs tasks) before coding — built into `/feature` (§4b) and `/improve` (§3b). `/checklist` = requirements-quality checklist ("unit tests for the English") for a risk dimension. `/tasks-to-issues` = export `tasks.md` to GitHub issues for human/distributed tracking (an alternative to the in-session build loop, not a step in it). |
 | `/pr` | Get the current branch's work onto the **right** PR: checks the **live** PR status, rebases onto base, resolves conflicts, verifies, and pushes (`--force-with-lease`). Updates the open PR, or opens a **new** one if the branch's PR was already merged. |
+| `/projectstatus` | **Where are we / what's next?** Spec-progress snapshot — reads the spec layer from the stack profile, reports per-milestone progress, flags blockers, and recommends the single next action. Read-only. |
+| `/projecthealth` | **Is it green & deployable?** Operational snapshot — git working tree, open PRs + CI, and `[VERIFY]` quality gates always; plus DB migrations/advisors, deploys, and prod drift **when the stack profile declares them**. Read-only, red-first verdict. |
 | `/writing-skills` | Author or update the skills in this repo using TDD-for-skills (RED baseline → GREEN minimal skill → REFACTOR to close loopholes). Vendored from [Superpowers](https://github.com/obra/superpowers) — see `skills/writing-skills/ATTRIBUTION.md`. |
 
-**Routing in one line:** new feature → `/feature` · change a working feature → `/improve` · wrong/broken behavior → `/troubleshoot`.
+**Routing in one line:** new feature → `/feature` · change a working feature → `/improve` · wrong/broken behavior → `/troubleshoot` · where are we / what's next → `/projectstatus` · is it green/deployable → `/projecthealth`.
+
+> `/projectstatus` and `/projecthealth` are the two **status** lenses — progress vs.
+> operational health. Both are read-only and both read the stack profile (the spec layer
+> and the optional **Health / operations** section, respectively), so the same skills work
+> on any stack: a project with no DB/deploy/specs simply gets the always-on signals and
+> `n/a` for the rest.
 
 ### The line between `/improve` and `/troubleshoot`
 - `/improve` = **change correct behavior** (add/extend/modify a feature that works as specified).

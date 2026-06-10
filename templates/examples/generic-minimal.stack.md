@@ -31,6 +31,17 @@ none
 <your test command, if any>
 ```
 
+## Health / operations
+
+> All optional. With everything `none`, `projecthealth` reports just the always-on
+> signals (git working tree + the verify commands above) and marks the rest `n/a`.
+
+- **CI:** none
+- **Deploy platform:** none
+- **Database / migrations:** none
+- **Environments:** single
+- **Prod promotion / drift:** none — single repo, deploy from main
+
 ## Spec / planning layer
 
 - **Spec location glob:** none
