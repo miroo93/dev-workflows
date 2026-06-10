@@ -69,11 +69,30 @@
 <e.g. npm test -- --run>
 ```
 
+## Health / operations (optional)
+
+> Read by the `projecthealth` skill for an operational "is it green & deployable?"
+> snapshot. **Everything here is optional — omit a line and `projecthealth` reports that
+> signal as `n/a` (never as red).** The always-on signals (git working tree + `[VERIFY]`)
+> need nothing here.
+
+- **CI:** <how to read CI — e.g. `gh run list` / `gh pr checks` on workflows `ci.yml`,
+  `e2e.yml`; or "none">
+- **Deploy platform:** <e.g. Vercel (`vercel ls` / `/vercel:status`), Netlify, Fly,
+  Heroku; or "none">
+- **Database / migrations:** <e.g. Supabase — migrations in `supabase/migrations/`,
+  advisors via the Supabase MCP/CLI; or Prisma `prisma migrate status`; or "none">
+- **Environments:** <e.g. `staging=<ref/url>`, `prod=<ref/url>`; or "single">
+  <!-- When more than one, projecthealth checks DB/deploy per environment and never mixes them. -->
+- **Prod promotion / drift:** <e.g. promote dev→prod repo `org/app-prod` via a
+  `synctoprod`-style skill, tracked in `docs/prod-sync-log.md`; or "none — single repo,
+  deploy from main">
+
 ## Spec / planning layer (optional)
 
 > How specs are organized, if you use a spec-driven layer. The `improve`/`troubleshoot`
-> skills search here to find a feature's spec. If you don't use specs, write "none" and
-> the skills will operate without a spec oracle.
+> skills search here to find a feature's spec, and `projectstatus` reads it for progress.
+> If you don't use specs, write "none" and the skills will operate without a spec oracle.
 
 - **Spec location glob:** <e.g. specs/**/spec.md, or docs/features/*.md, or "none">
 - **Spec tooling:** <e.g. GitHub Spec-Kit (.specify/), or plain markdown, or none>

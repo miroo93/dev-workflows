@@ -1,8 +1,8 @@
 {
   "name": "dev-workflows",
   "displayName": "Dev Workflows",
-  "version": "0.4.0",
-  "description": "Stack-agnostic spec-driven development workflows: build a feature, change a feature, fix a bug, plus a design grill and a real-browser e2e smoke gate. Reads a per-project stack config so the same skills work on any stack.",
+  "version": "0.5.0",
+  "description": "Stack-agnostic spec-driven development workflows: build a feature, change a feature, fix a bug, plus a design grill, a real-browser e2e smoke gate, and project status/health snapshots. Reads a per-project stack config so the same skills work on any stack.",
   "author": {
     "name": "Michael B"
   },
@@ -15,6 +15,8 @@
     "troubleshoot",
     "code-review",
     "e2e",
+    "project-status",
+    "project-health",
     "stack-agnostic"
   ],
   "skills": "./skills/"

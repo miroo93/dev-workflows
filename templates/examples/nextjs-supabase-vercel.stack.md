@@ -44,6 +44,26 @@ npm run build           # next build
 npm test                # vitest run / jest --ci  (delete if no test suite yet)
 ```
 
+## Health / operations
+
+> Read by `projecthealth`. This stack has the full set: CI, a deploy platform, a
+> database with migrations + advisors, two environments, and a separate prod repo.
+
+- **CI:** `gh run list` / `gh pr checks <n>` on GitHub Actions — `ci.yml` (lint /
+  typecheck / unit) and a separate `e2e.yml` (Playwright). Migrations run from a
+  `migrations.yml` (staging) and a prod-side workflow on merge.
+- **Deploy platform:** Vercel — `/vercel:status` (or `vercel ls`) for the latest prod +
+  preview deploy state.
+- **Database / migrations:** Supabase — migration files in `supabase/migrations/*.sql`;
+  compare against the applied list and read advisors (security + performance) via the
+  Supabase MCP/CLI. Inspection only — `projecthealth` never applies.
+- **Environments:** `staging=<staging-project-ref>` (Vercel Preview, anonymized seed),
+  `prod=<prod-project-ref>` (Vercel Production, real data). Migrations flow staging→prod;
+  never mix them.
+- **Prod promotion / drift:** dev repo promotes to a separate prod repo (e.g.
+  `org/app-prod`) via a `synctoprod`-style skill; drift is tracked in
+  `docs/prod-sync-log.md` (newest local migration vs. what's promoted; any open sync PR).
+
 ## Spec / planning layer
 
 <!-- Pick what you actually use. Plain markdown is the lowest-friction option. -->
