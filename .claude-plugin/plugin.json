@@ -1,7 +1,7 @@
 {
   "name": "dev-workflows",
   "displayName": "Dev Workflows",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Stack-agnostic spec-driven development workflows: build a feature, change a feature, fix a bug, plus a design grill, a real-browser e2e smoke gate, and project status/health snapshots. Reads a per-project stack config so the same skills work on any stack.",
   "author": {
     "name": "Michael B"

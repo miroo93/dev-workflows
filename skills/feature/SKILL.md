@@ -11,7 +11,7 @@ Fully automated SDD pipeline for **building a new feature** end-to-end, combinin
 
 > **Routing:** new feature → `/feature` (this skill) · change an existing feature → `/improve` · bug you hit while testing → `/troubleshoot`.
 
-Flow: load stack profile → brainstorm → grill → spec → clarify → plan → tasks → worktree → implement (TDD, subagents per task, review) → finish/PR. No manual step-by-step required.
+Flow: load stack profile → brainstorm → grill → spec → clarify → plan → tasks → worktree → implement (TDD, subagents per task, review) → final validation → `/code-review` gate → e2e smoke → finish/PR. No manual step-by-step required.
 
 ## Stack profile (READ FIRST)
 
@@ -101,6 +101,8 @@ digraph pipeline {
     "5. Worktree isolation" [shape=box];
     "6. Implement loop (TDD)" [shape=box];
     "7. Final validation" [shape=box];
+    "7b. Code-review gate (/code-review)" [shape=box];
+    "7c. E2E smoke gate (soft)" [shape=box];
     "8. Finish / PR" [shape=box];
     "DONE" [shape=doublecircle];
 
@@ -114,7 +116,9 @@ digraph pipeline {
     "4b. Analyze gate (cross-artifact, read-only)" -> "5. Worktree isolation";
     "5. Worktree isolation" -> "6. Implement loop (TDD)";
     "6. Implement loop (TDD)" -> "7. Final validation";
-    "7. Final validation" -> "8. Finish / PR";
+    "7. Final validation" -> "7b. Code-review gate (/code-review)";
+    "7b. Code-review gate (/code-review)" -> "7c. E2E smoke gate (soft)";
+    "7c. E2E smoke gate (soft)" -> "8. Finish / PR";
     "8. Finish / PR" -> "DONE";
 }
 ```
@@ -508,7 +512,7 @@ After all tasks complete:
 
 1. Run **[VERIFY]** directly (not via subagent — confirm a clean result), **from inside `WORKTREE_PATH`** (`cd "WORKTREE_PATH"` first — the code under test is in the worktree, not the repo root).
 2. If it fails: dispatch a fix subagent targeting the specific errors.
-3. Once clean: dispatch a final code-review subagent across the full diff:
+3. Once clean: dispatch a final **spec-and-convention review** subagent across the full diff (this is the spec-aware pass; the `/code-review` skill in step 4 is the separate correctness/cleanup pass):
 
 ```
 Final code review for the feature.
@@ -539,11 +543,23 @@ Return:
 
 If READY_FOR_PR is no: fix blockers, then re-review.
 
-4. **E2E browser smoke gate (soft).** If the profile's *E2E smoke gate* is `enabled: true`, invoke the **`e2e-smoke`** skill with:
+4. **Code-review gate (`/code-review`) — correctness + cleanup sweep across the whole diff.** The per-task reviews (step 6) and the final review above are **spec- and convention-aware** (do the requirements hold; are the project's conventions/frozen patterns respected). The `/code-review` skill is the complementary **bug-hunting + cleanup** pass: it reads the full branch diff for correctness bugs and reuse/simplification/efficiency cleanups the spec-focused reviews don't target. Run it **from inside `WORKTREE_PATH`** (`cd "WORKTREE_PATH"` first — it reviews the working-tree diff, so the worktree must be the one with the changes), at **`high`** effort for the full pipeline:
+
+   ```
+   /code-review high
+   ```
+
+   Handling the findings (the skill groups them as correctness bugs vs. cleanups):
+   - **Correctness bugs at critical/important severity are blockers** → fix before the PR. Dispatch a fix implementer subagent (worktree contract applies), or apply with `/code-review high --fix` when the fix is small and self-evident, then re-run **[VERIFY]** and re-review until the diff is clean.
+   - **Cleanups (reuse / simplification / efficiency)** → apply the safe, localized ones (`--fix` is fine here), re-run **[VERIFY]**. Defer anything that would *expand scope* or that the skill itself flagged as uncertain — record it as a non-blocking note in the PR body instead of growing the diff.
+   - **Never auto-apply a fix that crosses the stop-class** (schema/migration, security/auth/secrets, a frozen pattern, or a one-way door). If a finding's fix would cross one, surface it and follow the deferred-decision policy — do not let `--fix` silently make a stop-class change.
+   - **Non-interactive contexts** (`/loop`, no live user): the review still runs (it's analysis, not interactive). Apply only clearly-safe fixes + cleanups; queue any blocker whose fix crosses the stop-class as a `NEEDS_CLARIFICATION`/PR note rather than guessing.
+
+5. **E2E browser smoke gate (soft).** If the profile's *E2E smoke gate* is `enabled: true`, invoke the **`e2e-smoke`** skill with:
    - `FEATURE_DIRECTORY` = the feature dir
    - `WORKTREE_PATH` = the worktree from step 5
    - `SMOKE_FOCUS` = the user stories / routes this feature added
-   Apply its soft-gate contract: `PASS` → proceed to §8. `FAIL` → fix the failing interaction (back to step 6), then re-run. `BLOCKED` → surface the reason and ask the user whether to proceed to PR without the e2e check. Never silently skip. (If the gate is disabled in the profile, skip this step.) **Keep the evidence it returns** (`EVIDENCE` = per-step screenshots; `VIDEO` = the Playwright video/report link when the run produced one) and carry it into the PR body in §8.
+   Apply its soft-gate contract: `PASS` → proceed to §8. `FAIL` → fix the failing interaction (back to step 6), then re-run. `BLOCKED` → surface the reason and ask the user whether to proceed to PR without the e2e check. Never silently skip. (If the gate is disabled in the profile, skip this step.) **Keep the evidence it returns** (`EVIDENCE` = per-step screenshots; `VIDEO` = the Playwright video/report link when the run produced one) and carry it into the PR body in §8. Run e2e **after** the code-review gate so it validates the post-cleanup state.
 
 ---
 
@@ -577,6 +593,7 @@ This pipeline runs multiple subagents to protect the main context window:
 | Each impl task | subagent | Fresh context per task — no drift |
 | Reviews | subagent | Independent read of diff only |
 | Final review | subagent | Full diff read without prior context |
+| Code-review gate (7.4) | the `/code-review` skill | Correctness-bug + cleanup sweep over the full diff — complements the spec/convention reviews |
 
 The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASKS_FILE`, `WORKTREE_PATH`, current task ID/status, TodoWrite progress.
 
@@ -604,6 +621,8 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 | Implementer BLOCKED | Escalate to user — do not force retry |
 | Build fails after all tasks | Dispatch targeted fix subagent |
 | Final review not ready | Fix blockers, re-review, then PR |
+| `/code-review` gate (7.4) finds a correctness blocker | Fix it (implementer subagent, or `--fix` if small) before the PR; re-run [VERIFY] and re-review until clean |
+| `/code-review` finding's fix would cross the stop-class | Don't auto-apply (no `--fix`); surface it and follow the deferred-decision policy |
 
 ---
 
@@ -620,6 +639,7 @@ The orchestrating session tracks only: `FEATURE_DIRECTORY`, `BRANCH_NAME`, `TASK
 - [ ] All tasks in tasks.md marked `[X]`
 - [ ] Verify commands pass cleanly
 - [ ] Final code review approved
+- [ ] Code-review gate (`/code-review`, step 7.4) ran over the full diff; correctness blockers fixed and re-verified, safe cleanups applied (or deferred to PR notes), no stop-class change auto-applied
 - [ ] E2E smoke gate (if enabled) ran: `PASS` (or `BLOCKED` with explicit user go-ahead)
 - [ ] Branch finished via `superpowers:finishing-a-development-branch` (worktree cleaned up)
 - [ ] PR created with spec link and smoke-test checklist

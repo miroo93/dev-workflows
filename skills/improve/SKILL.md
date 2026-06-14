@@ -75,6 +75,7 @@ digraph improve {
     "4. Worktree isolation" [shape=box];
     "5. Implement (TDD + 2-stage review)" [shape=box];
     "6. Verify (lint/build + suite)" [shape=box];
+    "6b. Code-review gate (/code-review, T2/T3)" [shape=box];
     "7. Finish / PR" [shape=box];
     "DONE" [shape=doublecircle];
 
@@ -88,7 +89,8 @@ digraph improve {
     "3b. Analyze gate (T3, read-only)" -> "4. Worktree isolation";
     "4. Worktree isolation" -> "5. Implement (TDD + 2-stage review)";
     "5. Implement (TDD + 2-stage review)" -> "6. Verify (lint/build + suite)";
-    "6. Verify (lint/build + suite)" -> "7. Finish / PR";
+    "6. Verify (lint/build + suite)" -> "6b. Code-review gate (/code-review, T2/T3)";
+    "6b. Code-review gate (/code-review, T2/T3)" -> "7. Finish / PR";
     "7. Finish / PR" -> "DONE";
 }
 ```
@@ -252,7 +254,14 @@ Run directly, confirm output (`superpowers:verification-before-completion`) — 
 1. New tests pass.
 2. **[VERIFY]** — zero errors. Paste relevant output.
 3. **Full pre-existing suite still green** — no regressions in unchanged behavior.
-4. **E2E browser smoke gate (soft).** For T2/T3, if the profile's e2e gate is `enabled: true`, invoke the **`e2e-smoke`** skill with `FEATURE_DIRECTORY`, `WORKTREE_PATH`, and `SMOKE_FOCUS` = the behavior delta. Soft-gate contract: `PASS` → §7. `FAIL` → fix (back to §5), re-run. `BLOCKED` → surface the reason and ask whether to proceed without the e2e check. T1 (no behavior change) skips it; disabled gate skips it.
+4. **Code-review gate (`/code-review`) — correctness + cleanup sweep on the change.** The two-stage review in §5 is **spec- and convention-aware** (does the diff implement the amended spec; are conventions/frozen patterns respected). `/code-review` is the complementary **bug-hunting + cleanup** pass over the change's diff — correctness bugs and reuse/simplification/efficiency cleanups the spec-focused reviews don't target. Because `/improve` touches **working** code, this is also a regression sweep: it reads the diff for bugs the change may have introduced. Run it for **T2/T3** (T1's single direct edit doesn't warrant it), **from inside `WORKTREE_PATH`** when a worktree is in use (`cd` there first), at effort scaled to the tier — **`medium`** for T2, **`high`** for T3:
+
+   ```
+   /code-review medium   # T2 — or: /code-review high for T3
+   ```
+
+   Handling: **correctness bugs at critical/important severity are blockers** → fix before the PR (TDD slice or fix subagent for T3, or `/code-review … --fix` when small), then re-run **[VERIFY]** + the pre-existing suite and re-review until clean. **Cleanups** → apply the safe, localized ones (`--fix`), re-verify; defer scope-expanding or uncertain ones to PR notes. **Never auto-apply a fix that crosses the stop-class** (schema/migration, security/auth/secrets, frozen pattern, one-way door, or a backward-incompatible change) — surface it instead. **Non-interactive** (`/loop`): the review still runs; apply only clearly-safe fixes, queue stop-class blockers as PR notes.
+5. **E2E browser smoke gate (soft).** For T2/T3, if the profile's e2e gate is `enabled: true`, invoke the **`e2e-smoke`** skill with `FEATURE_DIRECTORY`, `WORKTREE_PATH`, and `SMOKE_FOCUS` = the behavior delta. Soft-gate contract: `PASS` → §7. `FAIL` → fix (back to §5), re-run. `BLOCKED` → surface the reason and ask whether to proceed without the e2e check. Run e2e **after** the code-review gate so it validates the post-cleanup state. T1 (no behavior change) skips it; disabled gate skips it.
 
 If any check fails, return to step 5 — don't proceed to PR with a failing gate.
 
@@ -284,6 +293,7 @@ Report the PR URL.
 | Isolation | `superpowers:using-git-worktrees` | Don't disturb the working tree |
 | Build | `superpowers:test-driven-development` / `superpowers:subagent-driven-development` | TDD; per-task loop for T3 |
 | Review | (the two reviewer prompts from `/feature`) | Spec-compliance + code-quality on every change |
+| Code review (T2/T3) | `/code-review` | Correctness-bug + cleanup sweep over the change's diff (§6.4) — complements the spec/convention review |
 | Verify | `superpowers:verification-before-completion` | Gates + regression suite before claiming done |
 | Ship | `superpowers:finishing-a-development-branch` | Branch → PR + worktree cleanup |
 
@@ -302,6 +312,8 @@ Report the PR URL.
 | Change touches a frozen pattern | Surface to user — needs explicit authorization |
 | Analyze gate (T3) finds CRITICAL/HIGH on the delta | Fix the artifact before the worktree (amend spec + re-clarify, or re-dispatch scoped plan/tasks); re-run until CLEAN (§3b) |
 | Implementer tries to re-plan (T3) | Re-dispatch: "tasks.md is the contract — execute, don't re-plan" |
+| `/code-review` gate (§6.4) finds a correctness/regression blocker | Fix it (TDD slice or fix subagent, or `--fix` if small) before the PR; re-run [VERIFY] + the existing suite and re-review until clean |
+| `/code-review` finding's fix would cross the stop-class (incl. backward-incompatible) | Don't auto-apply (no `--fix`); surface it and follow the deferred-decision policy |
 | Subagent worked in the repo root (reviewer reports "no changes"; commits missing from the branch) | Re-dispatch with the absolute `WORKTREE_PATH` block at the top and the `cd … && git rev-parse --show-toplevel` self-check first (see `/feature` §5 dispatch contract) |
 | Existing suite breaks after change | Treat as a regression — fix before PR |
 
@@ -315,6 +327,7 @@ Report the PR URL.
 - [ ] For T3: analyze gate (§3b) ran after plan/tasks regen and returned CLEAN (delta fully covered, no contradictions) before the worktree
 - [ ] New tests written first (red → green); change implemented to spec
 - [ ] Two-stage review passed (spec-compliance + code-quality)
+- [ ] Code-review gate (`/code-review`, §6.4) ran for T2/T3 over the change's diff; correctness/regression blockers fixed and re-verified, safe cleanups applied (or deferred to PR notes), no stop-class change auto-applied
 - [ ] Verify commands clean; **full existing suite still green**
 - [ ] E2E smoke gate (if enabled) ran for T2/T3: `PASS` (or `BLOCKED` with explicit user go-ahead)
 - [ ] Branch → PR with amended-spec link + smoke-test checklist

@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Stack-agnostic spec-driven development workflows for Claude Code",
-    "version": "0.6.0"
+    "version": "0.7.0"
   },
   "plugins": [
     {
       "name": "dev-workflows",
       "source": "./",
       "description": "Stack-agnostic spec-driven development workflows: build a feature, change a feature, fix a bug, plus a design grill, a real-browser e2e smoke gate, and project status/health snapshots. Reads a per-project stack config so the same skills work on any stack.",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": { "name": "Michael B" },
       "license": "MIT",
       "keywords": ["spec-driven-development", "workflows", "tdd", "feature", "troubleshoot", "e2e", "project-status", "project-health", "stack-agnostic"],
