@@ -9,9 +9,9 @@ at runtime instead of hardcoding a framework or build command.
 
 | Skill | Use when… |
 |-------|-----------|
-| `/feature` | Build a **new** feature end-to-end (brainstorm → grill → spec → clarify → plan → tasks → analyze gate → worktree → TDD build with per-task review → PR). |
-| `/improve` | **Change/extend** an existing feature that works as specified. Amends the spec first, then a scope-matched build. |
-| `/troubleshoot` | **Fix a bug** you hit while manually testing. Root-cause gate (no fix before root cause) → test-first fix → PR. |
+| `/feature` | Build a **new** feature end-to-end (brainstorm → grill → spec → clarify → plan → tasks → analyze gate → worktree → TDD build with per-task review → `/code-review` gate → e2e smoke → PR). |
+| `/improve` | **Change/extend** an existing feature that works as specified. Amends the spec first, then a scope-matched build with the `/code-review` gate (T2/T3) before PR. |
+| `/troubleshoot` | **Fix a bug** you hit while manually testing. Root-cause gate (no fix before root cause) → test-first fix → `/code-review` gate → PR. |
 | `/grill-me` | Stress-test a plan/design — relentless one-decision-at-a-time interview via `AskUserQuestion`. Used as a gate by `/feature` and `/improve`. |
 | `e2e-smoke` | *(internal)* Real-browser smoke gate invoked by the three workflows. Returns PASS/FAIL/BLOCKED. |
 | `/spec` `/plan` `/tasks` `/implement` | Thin entry points that defer to your spec layer (GitHub Spec-Kit if installed, plain markdown, or none). |
@@ -141,6 +141,7 @@ The profile replaces everything the skills would otherwise hardcode:
 ## Notes & limitations
 
 - These skills **orchestrate** Superpowers skills by name. Without `superpowers`, the workflows lose their execution discipline (TDD loop, worktrees, branch finish) — install it.
+- **`/code-review` gate.** All three workflows run the `/code-review` skill as a final **correctness-bug + cleanup** sweep over the branch diff before the PR — `/feature` (§7.4, `high`), `/improve` (§6.4, `medium`/`high` by tier, T2/T3 only), `/troubleshoot` (§5.4, scaled to blast radius). It complements (does not replace) the spec/convention-aware reviews: those check *does the diff satisfy the spec and conventions*; `/code-review` hunts *correctness bugs* and proposes *reuse/simplify/efficiency* cleanups. Correctness blockers are fixed and re-verified before the PR; safe cleanups are applied (`--fix`) or deferred to PR notes; a finding whose fix would cross the **stop-class** (schema/auth/secrets/frozen pattern/one-way door) is surfaced, never auto-applied. If `/code-review` isn't installed, wire in the standalone review skill your setup provides — or skip the gate (the per-task/two-stage reviews still run).
 - `skills/e2e-smoke/e2e-smoke.sh` supports **token-injection** auth out of the box (mint a token from a JSON login endpoint, inject into `localStorage`). **Form-login** and **public** apps are driven directly by the `e2e-smoke` skill via Playwright MCP using only the script's `serve`/`teardown`.
 - The GitHub Spec-Kit `speckit-*` skills are **not** bundled — install Spec-Kit separately (`specify init`) if you want that layer. Otherwise the workflows default to plain-markdown specs (always written on non-trivial runs); Spec-Kit only adds clarify/checklist/analyze machinery on top. The `/spec`, `/plan`, `/tasks`, `/clarify`-equivalent, `/analyze`, `/checklist`, `/implement`, and `/tasks-to-issues` entry points defer to the matching `speckit-*` command when Spec-Kit is installed, and run a hand-rolled fallback otherwise.
 - **Two Spec-Kit commands are deliberately NOT wired into the `/feature`/`/improve` loop:** `speckit-implement` (a competing executor — the Superpowers subagent TDD loop replaces it) and `speckit-taskstoissues` (issue export for distributed teams — an alternative to the in-session loop, exposed only as the standalone `/tasks-to-issues`).

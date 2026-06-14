@@ -53,6 +53,7 @@ digraph troubleshoot {
     "3. GATE: present diagnosis + fix" [shape=diamond];
     "4. Fix test-first (TDD)" [shape=box];
     "5. Verify (test + lint/build)" [shape=box];
+    "5b. Code-review gate (/code-review)" [shape=box];
     "6. Branch → PR (finish)" [shape=box];
     "DONE" [shape=doublecircle];
 
@@ -62,7 +63,8 @@ digraph troubleshoot {
     "3. GATE: present diagnosis + fix" -> "4. Fix test-first (TDD)" [label="approved"];
     "3. GATE: present diagnosis + fix" -> "DONE" [label="rejected / hand off"];
     "4. Fix test-first (TDD)" -> "5. Verify (test + lint/build)";
-    "5. Verify (test + lint/build)" -> "6. Branch → PR (finish)";
+    "5. Verify (test + lint/build)" -> "5b. Code-review gate (/code-review)";
+    "5b. Code-review gate (/code-review)" -> "6. Branch → PR (finish)";
     "6. Branch → PR (finish)" -> "DONE";
 }
 ```
@@ -148,7 +150,14 @@ Run directly, confirm output, **evidence before assertions** (`superpowers:verif
 1. The new regression test passes.
 2. **[VERIFY]** — zero errors. Paste the relevant output.
 3. The pre-existing test suite still passes (no regressions).
-4. **E2E browser smoke gate (soft) — post-fix confirmation.** For a UI-visible bug, if the profile's e2e gate is `enabled: true`, invoke the **`e2e-smoke`** skill with `FEATURE_DIRECTORY` (or the area), `WORKTREE_PATH`, and `SMOKE_FOCUS` = the exact interaction that was broken — confirm it now produces the correct behavior in the running app. Soft-gate contract: `PASS` → §6. `FAIL` → the fix didn't hold in the real UI; back to step 4. `BLOCKED` → surface the reason, ask whether to ship without the e2e confirmation. (Reproduction in step 1 still uses `run`/browser debugging; this is the verification leg only. Skip for non-UI bugs.)
+4. **Code-review gate (`/code-review`) — confirm the fix is correct and clean.** Run the `/code-review` skill over the fix diff as a second pair of eyes on the root-cause fix: that it actually addresses the mechanism (not a symptom patch), introduces no new correctness bug or regression, and is as small/clean as it should be. Scale effort to the fix's blast radius — **`medium`** for an ordinary one-area fix, **`high`** when the root-cause fix touched multiple files or a shared code path:
+
+   ```
+   /code-review medium   # or: /code-review high for a wider-blast-radius fix
+   ```
+
+   Handling: **correctness bugs / regressions at critical/important severity are blockers** → fix before the PR (back to step 4, test-first), then re-run **[VERIFY]** + the suite and re-review until clean. **Cleanups** → apply the safe, localized ones (`--fix`), re-verify; defer scope-expanding ones to PR notes — the fix should stay minimal. If `/code-review` surfaces a **stop-class boundary** the diagnosis gate (step 3) didn't catch (e.g. the correct fix really needs a schema/auth change), **re-gate** — never auto-apply a stop-class fix with `--fix`. **Non-interactive** (`/loop`): the review still runs; queue any stop-class finding rather than guessing.
+5. **E2E browser smoke gate (soft) — post-fix confirmation.** For a UI-visible bug, if the profile's e2e gate is `enabled: true`, invoke the **`e2e-smoke`** skill with `FEATURE_DIRECTORY` (or the area), `WORKTREE_PATH`, and `SMOKE_FOCUS` = the exact interaction that was broken — confirm it now produces the correct behavior in the running app. Soft-gate contract: `PASS` → §6. `FAIL` → the fix didn't hold in the real UI; back to step 4. `BLOCKED` → surface the reason, ask whether to ship without the e2e confirmation. (Reproduction in step 1 still uses `run`/browser debugging; this is the verification leg only. Skip for non-UI bugs.)
 
 If any check fails, return to step 4 — do not proceed to PR with a failing gate.
 
@@ -174,6 +183,7 @@ Report the PR URL to the user.
 | Backend logs | profile's backend-log tool (optional) | Logs for runtime/invocation bugs |
 | Drive the app | `run` / `superpowers-chrome:browsing` | Reproduce UI bugs in the running app |
 | Fix | `superpowers:test-driven-development` | Regression test first, root-cause fix |
+| Code review | `/code-review` | Second-eyes sweep of the fix diff (§5.4) — correctness/regression + cleanup before shipping |
 | Verify | `superpowers:verification-before-completion` | Run gates, confirm output before claiming fixed |
 | Ship | `superpowers:finishing-a-development-branch` | Branch → PR + cleanup |
 
@@ -188,6 +198,8 @@ Report the PR URL to the user.
 | Root cause is a spec error | Fix `spec.md` first, surface it, then fix code |
 | Root cause is a frozen pattern | Surface to user — changing it needs explicit authorization |
 | Red test won't fail | The test doesn't capture the bug — revise reproduction before fixing |
+| `/code-review` gate (§5.4) finds a correctness/regression blocker | Fix it test-first (back to step 4) before the PR; re-run [VERIFY] + the suite and re-review until clean |
+| `/code-review` surfaces a stop-class boundary the diagnosis gate missed | Re-gate (step 3) before crossing it; never auto-apply a stop-class fix with `--fix` |
 | Fix needs a schema change | Stop — schema changes need explicit user approval |
 | Fix crosses a security/auth boundary or touches secrets | Stop — classify it in the gate's stop-class check; get explicit approval for the boundary crossing, not just "a fix" |
 | Root-cause fix is a one-way door (data model, public API/contract, architecture — hard to reverse / costly to refactor) | Flag it at the gate as one-way; prefer the smallest reversible fix that fixes the root cause; cross only with explicit approval. If discovered mid-fix, re-gate |
@@ -202,6 +214,7 @@ Report the PR URL to the user.
 - [ ] Diagnosis + proposed fix approved by the user (the gate)
 - [ ] Stop-class classified in the gate (none / schema / security-auth-secrets / frozen pattern / one-way door); any boundary crossing was approved explicitly, and was re-gated if discovered mid-fix
 - [ ] Regression test written first, confirmed red, then green
+- [ ] Code-review gate (`/code-review`, §5.4) ran over the fix diff; correctness/regression blockers fixed and re-verified, no stop-class fix auto-applied (re-gated if one surfaced)
 - [ ] Verify commands clean; existing suite green
 - [ ] For UI bugs: e2e smoke confirmed the fix (`PASS`, or `BLOCKED` with explicit go-ahead) — if the gate is enabled
 - [ ] Branch → PR created with bug/root-cause/fix/test summary
